@@ -387,14 +387,20 @@ function extractMinPurchaseLimit(text) {
   return 0;
 }
 
+/**
+ * クーポン割引金額を抽出する
+ * 「〇〇円OFFクーポン」などの表記から金額を取得
+ * @returns {number} クーポン金額。取得できない場合は0
+ */
 function extractCoupon(doc = document, currentPrice = 0) {
-  // --- クーポン表示エリア of セレクタ候補 ---
+  // --- クーポン表示エリアのセレクタ候補（以前のコードに準拠） ---
   const couponSelectors = [
-    // 新デザイン系
+    // 新デザイン系（大文字小文字を区別せず match させるため i フラグ付きの属性セレクタを採用）
     ".coupon-area",
     ".coupon",
-    "[class*='coupon']",
-    "[class*='Coupon']",
+    "[class*='coupon' i]",
+    "[class*='racoupon' i]",
+    "[class*='ra-coupon' i]",
     // 従来デザイン系
     ".rakutenLimitedId_Coupon",
     ".item-coupon",
@@ -404,19 +410,15 @@ function extractCoupon(doc = document, currentPrice = 0) {
     ".coupon-badge",
   ];
 
-  // 抽出したクーポン金額を格納する配列
   const couponValues = [];
 
-  // 1. クーポン表示要素からの抽出（innerTextを使用して人間の目に見えるテキストのみ走査）
+  // 1. クーポン表示要素からの抽出（非表示スライドもカバーするため textContent を使用）
   for (const selector of couponSelectors) {
     try {
       const elements = doc.querySelectorAll(selector);
       for (const el of elements) {
-        // ショップ共通エリア（ヘッダー/フッター/サイドバーなど）にある広告や共通メニューは除外する
-        if (isInExcludedArea(el)) continue;
-
-        // textContent ではなく innerText を優先して使い、見えない script タグ等の誤検知を防ぐ
-        const text = (el.innerText ? el.innerText : el.textContent).replace(/[,、]/g, "");
+        // textContent を使って非表示スライドのクーポンもスキャンする
+        const text = el.textContent.replace(/[,、]/g, "");
 
         // クーポン適用条件の判定（商品価格が最低購入金額を満たしているかチェック）
         const minLimit = extractMinPurchaseLimit(text);
@@ -426,22 +428,47 @@ function extractCoupon(doc = document, currentPrice = 0) {
         }
 
         // 「1,000円OFF」「500円引き」「300円クーポン」など多様なパターンに対応
-        const matches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引|クーポン)/gi);
+        const matches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/g);
         for (const match of matches) {
           couponValues.push(parseInt(match[1], 10));
         }
       }
     } catch (e) {
-      // セレクタエラーは無視
+      // セレクタエラー is ignored
     }
   }
 
-  // 2. ページ全文（innerText）からクーポン表記を検索して配列に追加（常に実行して最大値を比較）
+  // 2. フォールバック: ページ全文からクーポン表記を検索
+  // セレクタ検索で別のクーポンを拾ってしまっても、本命のクーポンを全文スキャンで確実に救済するため、常に実行します。
   if (doc.body) {
-    const bodyText = (doc.body.innerText ? doc.body.innerText : doc.body.textContent).replace(/[,、]/g, "");
+    const clone = doc.body.cloneNode(true);
+    
+    // スクリプトやスタイル、および楽天共通ヘッダー・フッターなどの無関係なエリアを除外
+    const excludedSelectors = [
+      "script",
+      "style",
+      "#commonHeader",
+      "#commonFooter",
+      "#grHeader",
+      "#grFooter",
+      "#partsHeader",
+      "#partsFooter",
+      ".shop-header",
+      ".shopHeader"
+    ];
+    
+    for (const sel of excludedSelectors) {
+      try {
+        const els = clone.querySelectorAll(sel);
+        els.forEach(el => el.remove());
+      } catch (e) {}
+    }
+
+    const bodyText = clone.textContent.replace(/[,、]/g, "");
     const couponPatterns = [
-      /(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引)\s*クーポン/gi,
+      /(\d+)\s*円\s*(?:OFF|off|オフ)\s*クーポン/gi,
       /クーポン[\s:：]*(\d+)\s*円/gi,
+      /(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引)/gi, // 単体の「2500円OFF」や「2500円引き」も漏れなくキャッチ
     ];
 
     for (const pattern of couponPatterns) {
@@ -467,7 +494,7 @@ function extractCoupon(doc = document, currentPrice = 0) {
     }
   }
 
-  // 配列が空でない場合は Math.max で最大値を採用
+  // 検出されたクーポン額の中で「最大値」を採用する（重複合算によるブレを完全に防ぐため）
   const maxCoupon = couponValues.length > 0 ? Math.max(...couponValues) : 0;
   console.log("ResearchDeck: 抽出されたクーポン最大額:", maxCoupon);
   return maxCoupon;
