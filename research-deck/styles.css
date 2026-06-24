@@ -1,0 +1,678 @@
+/* ============================================================
+   ResearchDeck - スタイルシート
+   ジャパンディ（和とスカンジナビアの融合）風ミニマルモダンデザイン
+   視認性重視・楽天の既存デザインを干渉しないよう設計
+   ============================================================ */
+
+/* --- ダッシュボード全体のコンテナ --- */
+#rd-dashboard {
+  position: fixed;
+  top: 160px; /* 楽天のヘッダーに被らないように初期位置を下にずらす */
+  right: 16px;
+  width: 320px;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  z-index: 2147483647 !important;
+
+  /* ジャパンディ風の上質な背景 */
+  background-color: #faf8f5;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 24px rgba(44, 44, 44, 0.08),
+    0 1px 4px rgba(44, 44, 44, 0.04);
+
+  /* テキストの基本設定 */
+  font-family:
+    "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans",
+    "Noto Sans JP",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #2c2c2c;
+
+  /* 表示アニメーション */
+  animation: rd-slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* スライドインアニメーション */
+@keyframes rd-slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 閉じた時の非表示状態 */
+#rd-dashboard.rd-hidden {
+  display: none;
+}
+
+/* カスタムスクロールバー（ジャパンディ風の控えめなデザイン） */
+#rd-dashboard::-webkit-scrollbar {
+  width: 4px;
+}
+
+#rd-dashboard::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#rd-dashboard::-webkit-scrollbar-thumb {
+  background-color: #d1ccc6;
+  border-radius: 2px;
+}
+
+/* --- ヘッダー --- */
+.rd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eae6e1;
+  cursor: move; /* ドラッグ可能であることを示す */
+  user-select: none; /* ドラッグ中にテキストが選択されないようにする */
+}
+
+/* ヘッダー右側のボタン用コンテナ */
+.rd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* アイコンボタン（設定用） */
+.rd-icon-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 16px;
+  color: #9c9690;
+  transition: all 0.15s ease;
+}
+
+.rd-icon-btn:hover {
+  background-color: #eee9e3;
+  color: #2c2c2c;
+}
+
+.rd-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rd-logo-icon {
+  font-size: 18px;
+  color: #7c8c6e;
+  line-height: 1;
+}
+
+.rd-logo-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #2c2c2c;
+}
+
+/* 閉じるボタン */
+.rd-close {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 16px;
+  color: #9c9690;
+  transition: all 0.15s ease;
+}
+
+.rd-close:hover {
+  background-color: #eee9e3;
+  color: #2c2c2c;
+}
+
+/* --- 警告・情報メッセージ --- */
+.rd-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: #fdf5e6;
+  border: 1px solid #f0ddb8;
+  font-size: 12px;
+  color: #8b6914;
+  line-height: 1.5;
+}
+
+.rd-alert-info {
+  background-color: #f0f3f5;
+  border-color: #d4dce3;
+  color: #5a6e7f;
+}
+
+.rd-alert-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+/* --- 本体エリア --- */
+.rd-body {
+  padding: 16px 20px;
+}
+
+/* --- 識別子セクション（JAN/ASIN） --- */
+.rd-identifier-section {
+  background-color: #f4f2ef;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rd-identifier-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+}
+
+.rd-identifier-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 右寄せにしてラインを揃える */
+  gap: 4px;
+  width: 106px; /* ボタン2枚が綺麗に並ぶ幅を固定確保 */
+  flex-shrink: 0;
+}
+
+.rd-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 51px; /* 50pxより少しだけ広げて「楽天」「ヤフ」の文字を見切れないように微調整 */
+  height: 18px; /* ボタンの高さを18pxにコンパクト化 */
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 4px;
+  font-size: 9px; /* フォントサイズを9pxに小さく */
+  font-weight: 700;
+  text-decoration: none !important;
+  transition: all 0.15s ease-in-out;
+  line-height: 1;
+  white-space: nowrap; /* 改行を完全に防ぐ */
+}
+
+.rd-link-btn:hover {
+  filter: brightness(1.08) contrast(1.05);
+  transform: translateY(-0.5px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.rd-link-btn-rakuten {
+  background-color: #ab1e1e; /* シックな深紅 */
+  color: #ffffff !important;
+}
+
+.rd-link-btn-yahoo {
+  background-color: #d93540; /* 洗練された朱赤 */
+  color: #ffffff !important;
+}
+
+.rd-link-btn-amazon {
+  background-color: #e58d1f; /* 高級感のあるオレンジゴールド */
+  color: #ffffff !important; /* 白文字で他のボタンとトーンを統一 */
+}
+
+.rd-link-btn-sim {
+  background-color: #6b7f94; /* 落ち着いたスレートブルー */
+  color: #ffffff !important;
+}
+
+.rd-identifier-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9c9690;
+  background-color: #e8e4df;
+  padding: 2px 4px;
+  border-radius: 4px;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.rd-identifier-value {
+  font-size: 12px; /* 少し小さくして見切れを防止 */
+  font-weight: 500;
+  font-family:
+    "SF Mono",
+    "Fira Code",
+    "Consolas",
+    monospace;
+  color: #2c2c2c;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between; /* 値とアイコンを綺麗に配置 */
+  width: 110px; /* 横幅を110pxに統一し、ボタンの縦ラインを完璧に揃える */
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.rd-identifier-value:hover {
+  background-color: #eee9e3;
+}
+
+.rd-copy-icon {
+  font-size: 12px;
+  color: #9c9690;
+  opacity: 0.7;
+}
+
+.rd-identifier-value:hover .rd-copy-icon {
+  opacity: 1;
+  color: #2c2c2c;
+}
+
+/* --- セクション共通 --- */
+.rd-section {
+  margin-bottom: 16px;
+}
+
+.rd-section:last-child {
+  margin-bottom: 0;
+}
+
+.rd-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* セクション名の左にある色付きドット */
+.rd-section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 楽天セクションのドット: 暖かみのあるテラコッタ */
+.rd-dot-rakuten {
+  background-color: #c4866b;
+}
+
+/* 利益計算セクションのドット: セージグリーン */
+.rd-dot-profit {
+  background-color: #7c8c6e;
+}
+
+/* 出品ステータスセクションのドット: スレートブルー */
+.rd-dot-listing {
+  background-color: #6b7f94;
+}
+
+/* 市場データセクションのドット: ゴールド */
+.rd-dot-market {
+  background-color: #b39b6e;
+}
+
+.rd-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9c9690;
+}
+
+/* --- データグリッド（各行） --- */
+.rd-data-grid {
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #eae6e1;
+  overflow: hidden;
+}
+
+.rd-data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  transition: background-color 0.1s ease;
+}
+
+.rd-data-row:not(:last-child) {
+  border-bottom: 1px solid #f4f2ef;
+}
+
+.rd-data-row:hover {
+  background-color: #fdfcfa;
+}
+
+.rd-data-label {
+  font-size: 12px;
+  color: #7a746d;
+  flex-shrink: 0;
+}
+
+.rd-data-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c2c2c;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 区切り線 --- */
+.rd-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e0dcd6, transparent);
+  margin: 0;
+}
+
+/* --- 実質仕入れ値の強調行 --- */
+.rd-highlight-row {
+  background-color: #f8f6f1;
+}
+
+.rd-highlight-row:hover {
+  background-color: #f5f2ec;
+}
+
+.rd-text-bold {
+  font-weight: 700;
+  color: #2c2c2c;
+}
+
+/* 実質仕入れ値の数字: セージグリーンで強調 */
+.rd-net-cost {
+  font-size: 16px;
+  font-weight: 800;
+  color: #5e7350;
+  letter-spacing: -0.02em;
+}
+
+/* ポイント・クーポン値: アクセントカラー（スレートブルー） */
+.rd-text-accent {
+  color: #6b7f94;
+}
+
+/* 手数料の色（落ち着いたグレー） */
+.rd-text-fee {
+  color: #9c9690;
+}
+
+/* 小さめテキスト（カテゴリ名など長いテキスト向け） */
+.rd-text-small {
+  font-size: 11px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 強調テキスト（月間販売数） */
+.rd-text-emphasis {
+  color: #b39b6e;
+  font-weight: 700;
+}
+
+/* 薄いテキスト（推定精度など補足情報） */
+.rd-text-muted {
+  color: #b0aaa3;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+/* --- 利益額の色分け --- */
+.rd-profit-value {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* 黒字（利益あり）: セージグリーン */
+.rd-profit-positive {
+  color: #4a7a3a;
+}
+
+/* 赤字（損失）: テラコッタレッド */
+.rd-profit-negative {
+  color: #b44a3a;
+}
+
+/* --- 出品ステータスバッジ --- */
+.rd-listing-status {
+  padding: 12px 14px;
+  background-color: #ffffff;
+  border: 1px solid #eae6e1;
+  border-radius: 8px;
+}
+
+.rd-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* リンクボタンとしてのバッジ（申請用リンクがある場合） */
+a.rd-badge {
+  text-decoration: none !important;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s ease-in-out;
+}
+
+a.rd-badge:hover {
+  filter: brightness(1.1) contrast(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+a.rd-badge:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 出品可能（目立つ緑のベタ塗り） */
+.rd-badge-ok {
+  background-color: #2e7d32;
+  color: #ffffff;
+  border: none;
+}
+
+/* 要申請（目立つオレンジのベタ塗り） */
+.rd-badge-warn {
+  background-color: #ef6c00;
+  color: #ffffff;
+  border: none;
+}
+
+/* 出品不可（目立つ赤のベタ塗り） */
+.rd-badge-ng {
+  background-color: #c62828;
+  color: #ffffff;
+  border: none;
+}
+
+/* 不明 */
+.rd-badge-unknown {
+  background-color: #757575;
+  color: #ffffff;
+  border: none;
+}
+
+/* 出品制限の理由 */
+.rd-restriction-reasons {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rd-restriction-reason {
+  font-size: 11px;
+  color: #7a746d;
+  line-height: 1.5;
+  padding-left: 8px;
+  border-left: 2px solid #e8e4df;
+}
+
+/* --- ローディング表示 --- */
+.rd-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px;
+  background-color: #ffffff;
+  border: 1px solid #eae6e1;
+  border-radius: 8px;
+}
+
+.rd-loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e8e4df;
+  border-top-color: #7c8c6e;
+  border-radius: 50%;
+  animation: rd-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes rd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rd-loading-text {
+  font-size: 12px;
+  color: #9c9690;
+}
+
+/* --- フッター --- */
+.rd-footer {
+  padding: 10px 20px 14px;
+  border-top: 1px solid #eae6e1;
+}
+
+.rd-footer-text {
+  font-size: 10px;
+  color: #b8b2aa;
+  letter-spacing: 0.02em;
+}
+
+/* --- 追加ポイントの数値入力フォーム --- */
+.rd-number-input {
+  width: 50px;
+  text-align: right;
+  padding: 2px 6px;
+  border: 1px solid #eae6e1;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2c2c2c;
+  background-color: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.rd-number-input:focus {
+  border-color: #6b7f94; /* フォーカス時にスレートブルーで強調 */
+}
+
+/* Chrome等のブラウザでスピンボタン（上下矢印）を常時表示 */
+.rd-number-input::-webkit-inner-spin-button,
+.rd-number-input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* --- 保管手数料の内訳ツールチップ --- */
+.rd-tooltip {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted #b0aaa3; /* 下線をつけてホバーできることを明示 */
+  display: inline-block;
+}
+
+/* ツールチップの本体吹き出し */
+.rd-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%; /* 要素の上に配置 */
+  right: 0;      /* 右寄せにしてダッシュボードの右端に合わせる */
+  background-color: rgba(44, 40, 36, 0.96); /* 和モダンな濃茶/ダークグレー */
+  color: #faf8f5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: normal;
+  white-space: pre-wrap; /* 改行コードを有効にし、枠幅に合わせて自動折り返しも行う */
+  max-width: 240px;      /* ダッシュボードの左枠からはみ出ないように最大幅を制限 */
+  width: max-content;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 2147483647;
+  line-height: 1.5;
+  border: 1px solid #d4c5b9;
+  text-align: left;
+  transform: translateY(4px); /* 下からふわっと浮き上がる */
+}
+
+/* ツールチップ下部の三角矢印 */
+.rd-tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: 112%;
+  right: 14px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(44, 40, 36, 0.96) transparent transparent transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 2147483647;
+  transform: translateY(4px);
+}
+
+/* ホバー時に表示 */
+.rd-tooltip:hover::after,
+.rd-tooltip:hover::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+

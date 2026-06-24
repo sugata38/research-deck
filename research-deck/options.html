@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchDeck - 設定</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="rd-options-container">
+    <!-- ヘッダー -->
+    <div class="rd-options-header">
+      <span class="rd-options-logo-icon">◈</span>
+      <h1 class="rd-options-title">ResearchDeck</h1>
+      <p class="rd-options-subtitle">SP-API 接続設定</p>
+    </div>
+
+    <!-- 説明 -->
+    <div class="rd-options-info">
+      <p>Amazon SP-API（Selling Partner API）の認証情報を入力してください。<br>
+      入力した情報はブラウザのローカルストレージに安全に保存され、外部には送信されません。</p>
+    </div>
+
+    <!-- 設定フォーム -->
+    <form id="rd-settings-form" class="rd-options-form">
+      <div class="rd-form-group">
+        <label for="rd-client-id" class="rd-form-label">LWA Client ID</label>
+        <input
+          type="text"
+          id="rd-client-id"
+          class="rd-form-input"
+          placeholder="amzn1.application-oa2-client.xxxx..."
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="rd-form-hint">Seller Central → アプリとサービス → アプリ開発 で確認できます</span>
+      </div>
+
+      <div class="rd-form-group">
+        <label for="rd-client-secret" class="rd-form-label">LWA Client Secret</label>
+        <input
+          type="password"
+          id="rd-client-secret"
+          class="rd-form-input"
+          placeholder="amzn1.oa2-cs.v1.xxxx..."
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="rd-form-hint">アプリ詳細ページの「LWA credentials」セクションに表示されます</span>
+      </div>
+
+      <div class="rd-form-group">
+        <label for="rd-refresh-token" class="rd-form-label">Refresh Token</label>
+        <input
+          type="password"
+          id="rd-refresh-token"
+          class="rd-form-input"
+          placeholder="Atzr|xxxx..."
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="rd-form-hint">Self-Authorization（自己認可）で取得したリフレッシュトークン</span>
+      </div>
+
+      <div class="rd-form-group">
+        <label for="rd-seller-id" class="rd-form-label">出品者ID（Seller ID）</label>
+        <input
+          type="text"
+          id="rd-seller-id"
+          class="rd-form-input"
+          placeholder="A1XXXXXXXXXXXXX"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="rd-form-hint">Seller Central → 設定 → 出品用アカウント情報 で確認できます</span>
+      </div>
+
+      <!-- ボタンエリア -->
+      <div class="rd-form-actions">
+        <button type="submit" id="rd-save-btn" class="rd-btn rd-btn-primary">保存する</button>
+        <button type="button" id="rd-test-btn" class="rd-btn rd-btn-secondary">接続テスト</button>
+      </div>
+    </form>
+
+    <!-- ステータスメッセージ -->
+    <div id="rd-status" class="rd-status" hidden></div>
+
+    <!-- フッター -->
+    <div class="rd-options-footer">
+      <p>ResearchDeck v1.0.0 — 個人利用専用ツール</p>
+      <p class="rd-footer-note">すべてのデータはローカルで処理されます</p>
+    </div>
+  </div>
+
+  <!-- インラインスクリプトはMV3で禁止のため、外部ファイルで読み込み -->
+  <script src="options.js"></script>
+</body>
+</html>

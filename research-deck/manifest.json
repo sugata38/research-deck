@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ResearchDeck",
+  "version": "1.0.0",
+  "description": "楽天市場の商品ページから実質仕入れ値を自動計算し、SP-API経由でAmazonの利益・出品可否・販売数を分析する個人リサーチツール",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://item.rakuten.co.jp/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://sellercentral.amazon.co.jp/*"
+      ],
+      "js": ["amazon_calculator.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {},
+  "options_page": "options.html",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.amazon.com/*",
+    "https://sellingpartnerapi-fe.amazon.com/*",
+    "https://sellercentral.amazon.co.jp/*"
+  ]
+}
