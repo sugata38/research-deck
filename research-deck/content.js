@@ -7,6 +7,11 @@
 // コピー用SVGアイコン（重ね合わせたダブルスクエア記号。Lucide Copy icon）
 const COPY_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-left: 2px;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
 
+// グローバル（モジュール）スコープでの状態管理変数
+let currentAmazonData = null;
+let currentAutoCoupon = 0;
+let currentAutoExtraRate = 0;
+
 // ============================================================
 // 1. 楽天画面からのデータ抽出（スクレイピング）
 // ============================================================
@@ -364,6 +369,11 @@ function extractCoupon(doc = document) {
     ".coupon",
     "[class*='coupon']",
     "[class*='Coupon']",
+    "[class*='rcp-']",
+    "[class*='RaCoupon']",
+    "[id*='rcp-']",
+    "[id*='RaCoupon']",
+    "[data-coupon-id]",
     ".rakutenLimitedId_Coupon",
     ".item-coupon",
     "#coupon",
@@ -396,7 +406,7 @@ function extractCoupon(doc = document) {
   if (mainBody) {
     const textToSearch = mainBody.textContent.replace(/[,、]/g, "");
     const couponPatterns = [
-      /(\d+)\s*円\s*(?:OFF|off|オフ)\s*クーポン/gi,
+      /(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/gi,
       /クーポン[\s:：]*(\d+)\s*円/gi,
     ];
 
@@ -420,7 +430,7 @@ function extractCoupon(doc = document) {
     const bodyText = clone.textContent.replace(/[,、]/g, "");
 
     const fallbackPatterns = [
-      /(\d+)\s*円\s*(?:OFF|off|オフ)\s*クーポン/gi,
+      /(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/gi,
       /クーポン[\s:：]*(\d+)\s*円/gi,
     ];
 
@@ -1060,10 +1070,11 @@ async function fetchAndRenderAmazonData(rakutenData) {
       rakutenData.extraPoints = Math.abs(extraPoints);
       rakutenData.netCost = rakutenData.price - Math.abs(rakutenData.points) - Math.abs(extraPoints) - rakutenData.coupon;
       
+      currentAmazonData = result.data;
       renderDashboard(rakutenData, result.data);
     } else {
       console.warn("ResearchDeck: Amazonデータの取得に失敗しました。楽天データのみで描画します。", result ? result.error : "");
-      renderDashboard(rakutenData, {
+      const errorData = {
         error: result ? result.error : "通信エラー",
         pricingError: result ? result.pricingError : null,
         amazonPrice: null,
@@ -1077,12 +1088,14 @@ async function fetchAndRenderAmazonData(rakutenData) {
         salesRank: null,
         estimatedMonthlySales: null,
         categoryName: null,
-      });
+      };
+      currentAmazonData = errorData;
+      renderDashboard(rakutenData, errorData);
     }
   } catch (err) {
     console.error("ResearchDeck: Amazonデータ取得中に例外が発生しました", err);
     removeAmazonLoading();
-    renderDashboard(rakutenData, {
+    const exceptionData = {
       error: err.message || "予期しない通信エラー",
       amazonPrice: null,
       referralFee: 0,
@@ -1095,7 +1108,9 @@ async function fetchAndRenderAmazonData(rakutenData) {
       salesRank: null,
       estimatedMonthlySales: null,
       categoryName: null,
-    });
+    };
+    currentAmazonData = exceptionData;
+    renderDashboard(rakutenData, exceptionData);
   }
 }
 
@@ -1125,6 +1140,11 @@ async function initializeDetailPage() {
 
   console.log("ResearchDeck: 抽出結果", rakutenData);
 
+  // 初期の自動取得値（クーポンなど）を記憶
+  currentAutoCoupon = rakutenData.coupon;
+  currentAutoExtraRate = savedExtraRate;
+  currentAmazonData = null;
+
   // --- ステップ2: まず楽天データのみでダッシュボードを表示 ---
   renderDashboard(rakutenData, null);
 
@@ -1137,6 +1157,65 @@ async function initializeDetailPage() {
     rakutenData.janCode = null;
     renderDashboard(rakutenData, null);
   }
+
+  // --- ステップ4: 非同期で遅れてロードされるクーポンやJANコードを救済する自動ポーリング ---
+  const pollIntervals = [1500, 3000, 5000, 10000];
+  pollIntervals.forEach(delay => {
+    setTimeout(async () => {
+      console.log(`ResearchDeck: バックグラウンド自動再スキャンを実行します (${delay}ms)...`);
+      const newData = extractRakutenData();
+      let updated = false;
+
+      // 1. クーポン更新の確認
+      const couponInput = document.getElementById("rd-input-coupon");
+      const currentCouponVal = couponInput ? parseInt(couponInput.value || 0, 10) : rakutenData.coupon;
+      // ユーザーが手動編集していない（＝現在の入力値が前回自動取得した値と等しい）場合で、新しいクーポン値が異なる場合
+      if (newData.coupon !== currentAutoCoupon && currentCouponVal === currentAutoCoupon) {
+        console.log(`ResearchDeck: クーポン値が更新されました: ${currentAutoCoupon} -> ${newData.coupon}`);
+        rakutenData.coupon = newData.coupon;
+        currentAutoCoupon = newData.coupon;
+        updated = true;
+      }
+
+      // 2. JANコードの更新確認（初期ロードで取得できず、後からDOMにロードされた場合）
+      if (!rakutenData.janCode && newData.janCode && isValidJanCode(newData.janCode)) {
+        console.log(`ResearchDeck: JANコードが新しく検出されました: ${newData.janCode}`);
+        rakutenData.janCode = newData.janCode;
+        updated = true;
+      }
+
+      // 3. 価格の更新確認（初期値が0で、後からDOMにロードされた場合）
+      if (rakutenData.price === 0 && newData.price > 0) {
+        console.log(`ResearchDeck: 価格が新しく検出されました: ${newData.price}`);
+        rakutenData.price = newData.price;
+        rakutenData.points = newData.points || Math.floor(newData.price * 0.01);
+        
+        // 税抜価格を再計算
+        const pageTitle = document.title || "";
+        const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
+        const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
+        rakutenData.taxExcludedPrice = Math.floor(rakutenData.price / (1 + initialTaxRate));
+        updated = true;
+      }
+
+      if (updated) {
+        // 追加ポイントと実質仕入れ値を再計算
+        const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
+        rakutenData.extraPointRate = savedExtraRate;
+        const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
+        rakutenData.extraPoints = Math.abs(extraPoints);
+        rakutenData.netCost = rakutenData.price - Math.abs(rakutenData.points) - Math.abs(extraPoints) - rakutenData.coupon;
+
+        // JANコードが新しく取得できた場合はAmazonデータも取得し直す
+        if (rakutenData.janCode && (!currentAmazonData || currentAmazonData.error)) {
+          await fetchAndRenderAmazonData(rakutenData);
+        } else {
+          // それ以外は再描画のみ
+          renderDashboard(rakutenData, currentAmazonData);
+        }
+      }
+    }, delay);
+  });
 }
 
 // ============================================================
