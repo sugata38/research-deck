@@ -362,97 +362,115 @@ function isInExcludedArea(el) {
   return false;
 }
 
-function extractCoupon(doc = document) {
-  // --- クーポン表示エリアのセレクタ候補（部分一致セレクタも含め広範にスキャン） ---
+/**
+ * クーポンのテキストや周辺情報から最低購入金額（〇〇円以上）を抽出する
+ * @param {string} text - スキャン対象のテキスト
+ * @returns {number} 最低購入金額。ない場合は 0
+ */
+function extractMinPurchaseLimit(text) {
+  if (!text) return 0;
+  // カンマを除去
+  const cleanText = text.replace(/[,、]/g, "");
+
+  // 1. 「〇〇円以上」のパターン (例: 10000円以上)
+  const yenMatch = cleanText.match(/(\d+)\s*円以上/);
+  if (yenMatch) {
+    return parseInt(yenMatch[1], 10);
+  }
+
+  // 2. 「〇万円以上」のパターン (例: 1万円以上, 1.5万円以上)
+  const manYenMatch = cleanText.match(/(\d+(?:\.\d+)?)\s*万円以上/);
+  if (manYenMatch) {
+    return Math.floor(parseFloat(manYenMatch[1]) * 10000);
+  }
+
+  return 0;
+}
+
+function extractCoupon(doc = document, currentPrice = 0) {
+  // --- クーポン表示エリア of セレクタ候補 ---
   const couponSelectors = [
+    // 新デザイン系
     ".coupon-area",
     ".coupon",
     "[class*='coupon']",
     "[class*='Coupon']",
-    "[class*='rcp-']",
-    "[class*='RaCoupon']",
-    "[id*='rcp-']",
-    "[id*='RaCoupon']",
-    "[data-coupon-id]",
+    // 従来デザイン系
     ".rakutenLimitedId_Coupon",
     ".item-coupon",
     "#coupon",
+    // ショップクーポン
     ".shop-coupon",
     ".coupon-badge",
   ];
 
+  // 抽出したクーポン金額を格納する配列
   const couponValues = [];
 
-  // --- 1. クーポン表示要素からの抽出 ---
+  // 1. クーポン表示要素からの抽出（innerTextを使用して人間の目に見えるテキストのみ走査）
   for (const selector of couponSelectors) {
-    const elements = doc.querySelectorAll(selector);
-    for (const el of elements) {
-      // ショップ共通エリア（ヘッダー/フッター/サイドバーなど）にある広告や共通メニューは除外する
-      if (isInExcludedArea(el)) continue;
+    try {
+      const elements = doc.querySelectorAll(selector);
+      for (const el of elements) {
+        // ショップ共通エリア（ヘッダー/フッター/サイドバーなど）にある広告や共通メニューは除外する
+        if (isInExcludedArea(el)) continue;
 
-      const text = el.textContent.replace(/[,、]/g, "");
-      const matches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/gi);
-      for (const match of matches) {
-        const val = parseInt(match[1], 10);
-        if (val > 0) {
-          couponValues.push(val);
+        // textContent ではなく innerText を優先して使い、見えない script タグ等の誤検知を防ぐ
+        const text = (el.innerText ? el.innerText : el.textContent).replace(/[,、]/g, "");
+
+        // クーポン適用条件の判定（商品価格が最低購入金額を満たしているかチェック）
+        const minLimit = extractMinPurchaseLimit(text);
+        if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) {
+          console.log(`ResearchDeck: クーポン適用外（商品価格 ¥${currentPrice} < 最低購入条件 ¥${minLimit}）：`, text);
+          continue;
+        }
+
+        // 「1,000円OFF」「500円引き」「300円クーポン」など多様なパターンに対応
+        const matches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引|クーポン)/gi);
+        for (const match of matches) {
+          couponValues.push(parseInt(match[1], 10));
         }
       }
+    } catch (e) {
+      // セレクタエラーは無視
     }
   }
 
-  // --- 2. メインボディ領域（#pagebody等）のテキスト全体からの抽出 ---
-  const mainBody = doc.querySelector("#pagebody, #rakutenLimitedId_aroundCart, [class*='purchaseBox'], [class*='purchase-box']");
-  if (mainBody) {
-    const textToSearch = mainBody.textContent.replace(/[,、]/g, "");
+  // 2. ページ全文（innerText）からクーポン表記を検索して配列に追加（常に実行して最大値を比較）
+  if (doc.body) {
+    const bodyText = (doc.body.innerText ? doc.body.innerText : doc.body.textContent).replace(/[,、]/g, "");
     const couponPatterns = [
-      /(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/gi,
+      /(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引)\s*クーポン/gi,
       /クーポン[\s:：]*(\d+)\s*円/gi,
     ];
 
     for (const pattern of couponPatterns) {
-      const matches = textToSearch.matchAll(pattern);
-      for (const match of matches) {
-        const val = parseInt(match[1], 10);
-        if (val > 0) {
-          couponValues.push(val);
-        }
-      }
-    }
-  }
-
-  // --- 3. 最終フォールバック：共通エリアを除去した body 全体のテキストからの抽出 ---
-  if (doc.body) {
-    const clone = doc.body.cloneNode(true);
-    // 楽天共通ヘッダー・フッターおよびショップ看板のみを除外
-    const excludedEls = clone.querySelectorAll("#commonHeader, #commonFooter, #grHeader, #grFooter, #partsHeader, #partsFooter, .shop-header, .shopHeader");
-    excludedEls.forEach(el => el.remove());
-    const bodyText = clone.textContent.replace(/[,、]/g, "");
-
-    const fallbackPatterns = [
-      /(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/gi,
-      /クーポン[\s:：]*(\d+)\s*円/gi,
-    ];
-
-    for (const pattern of fallbackPatterns) {
       const matches = bodyText.matchAll(pattern);
       for (const match of matches) {
-        const val = parseInt(match[1], 10);
-        if (val > 0) {
-          couponValues.push(val);
+        const couponVal = parseInt(match[1], 10);
+
+        // マッチした位置の前後50文字を切り出して利用条件をチェック
+        const matchIndex = match.index;
+        const start = Math.max(0, matchIndex - 50);
+        const end = Math.min(bodyText.length, matchIndex + match[0].length + 50);
+        const contextText = bodyText.slice(start, end);
+
+        // クーポン適用条件の判定
+        const minLimit = extractMinPurchaseLimit(contextText);
+        if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) {
+          console.log(`ResearchDeck: 全文クーポン適用外（商品価格 ¥${currentPrice} < 最低購入条件 ¥${minLimit}）：`, contextText);
+          continue;
         }
+
+        couponValues.push(couponVal);
       }
     }
   }
 
-  // 検出されたクーポン額の中で「最大値」を採用する
-  if (couponValues.length > 0) {
-    const maxCoupon = Math.max(...couponValues);
-    console.log("ResearchDeck: 検出されたクーポン候補:", couponValues, "-> 採用値(最大値):", maxCoupon);
-    return maxCoupon;
-  }
-
-  return 0;
+  // 配列が空でない場合は Math.max で最大値を採用
+  const maxCoupon = couponValues.length > 0 ? Math.max(...couponValues) : 0;
+  console.log("ResearchDeck: 抽出されたクーポン最大額:", maxCoupon);
+  return maxCoupon;
 }
 
 // ============================================================
@@ -788,11 +806,11 @@ function renderDashboard(rakutenData, amazonData) {
         <div class="rd-data-grid">
           <div class="rd-data-row">
             <span class="rd-data-label">価格（税込）</span>
-            <span class="rd-data-value">¥${formatNumber(rakutenData.price)}</span>
+            <span class="rd-data-value" id="rd-rakuten-price">¥${formatNumber(rakutenData.price)}</span>
           </div>
           <div class="rd-data-row">
             <span class="rd-data-label">獲得ポイント</span>
-            <span class="rd-data-value rd-text-accent">${formatNumber(Math.abs(rakutenData.points))}pt</span>
+            <span class="rd-data-value rd-text-accent" id="rd-rakuten-points">${formatNumber(Math.abs(rakutenData.points))}pt</span>
           </div>
           <div class="rd-data-row" style="flex-wrap: wrap;">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
@@ -979,37 +997,35 @@ function extractRakutenData(doc = document) {
   }
 
   // --- 2. script#item-page-app-data (JSON) からの抽出を試みる ---
-  if (!janCode || price === 0) {
-    const appDataEl = doc.getElementById("item-page-app-data");
-    if (appDataEl) {
-      try {
-        const rootData = JSON.parse(appDataEl.textContent);
-        const item = rootData.newApi && rootData.newApi.itemInfoSku;
-        if (item) {
-          // JANコードの特定
-          if (!janCode && item.sku && item.sku.length > 0) {
-            const firstJanSku = item.sku.find(s => s.articleNumber && s.articleNumber.value);
-            if (firstJanSku) {
-              janCode = firstJanSku.articleNumber.value;
-            }
-          }
-          // 価格の特定
-          if (price === 0 && item.sku && item.sku.length > 0) {
-            price = item.sku[0].taxIncludedPrice || 0;
-          }
-          
-          // ポイント倍率から獲得予定ポイントを概算
-          if (price > 0 && points === 0) {
-            let pointRate = 1;
-            if (item.newShopPoints && item.newShopPoints[0] && item.newShopPoints[0].all) {
-              pointRate = item.newShopPoints[0].all;
-            }
-            points = Math.floor(price * (pointRate / 100));
+  const appDataEl = doc.getElementById("item-page-app-data");
+  if (appDataEl) {
+    try {
+      const rootData = JSON.parse(appDataEl.textContent);
+      const item = (rootData.newApi && rootData.newApi.itemInfoSku) || (rootData.api && rootData.api.data && rootData.api.data.itemInfoSku);
+      if (item) {
+        // JANコードの特定
+        if (!janCode && item.sku && item.sku.length > 0) {
+          const firstJanSku = item.sku.find(s => s.articleNumber && s.articleNumber.value);
+          if (firstJanSku) {
+            janCode = firstJanSku.articleNumber.value;
           }
         }
-      } catch (e) {
-        console.warn("ResearchDeck: item-page-app-dataのパースに失敗しました", e);
+        // 価格の特定
+        if (price === 0 && item.sku && item.sku.length > 0) {
+          price = item.sku[0].taxIncludedPrice || 0;
+        }
+        
+        // ポイント倍率から獲得予定ポイントを概算
+        if (price > 0 && points === 0) {
+          let pointRate = 1;
+          if (item.newShopPoints && item.newShopPoints[0] && item.newShopPoints[0].all) {
+            pointRate = item.newShopPoints[0].all;
+          }
+          points = Math.floor(price * (pointRate / 100));
+        }
       }
+    } catch (e) {
+      console.warn("ResearchDeck: item-page-app-dataのパースに失敗しました", e);
     }
   }
 
@@ -1031,8 +1047,8 @@ function extractRakutenData(doc = document) {
     points = Math.floor(price * 0.01);
   }
 
-  // クーポンもDOMから抽出
-  coupon = extractCoupon(doc);
+  // クーポンもDOMから抽出（商品価格を渡して適用条件を判定できるようにする）
+  coupon = extractCoupon(doc, price);
 
   // 獲得ポイント値のマイナスやプラス符号の混入を防ぐため、常に絶対値にする
   const absolutePoints = Math.abs(points);
@@ -1206,12 +1222,50 @@ async function initializeDetailPage() {
         rakutenData.extraPoints = Math.abs(extraPoints);
         rakutenData.netCost = rakutenData.price - Math.abs(rakutenData.points) - Math.abs(extraPoints) - rakutenData.coupon;
 
-        // JANコードが新しく取得できた場合はAmazonデータも取得し直す
+        // JANコードが新しく取得できた場合はAmazonデータも取得し直すため、全体再描画を伴うfetchを実行
         if (rakutenData.janCode && (!currentAmazonData || currentAmazonData.error)) {
           await fetchAndRenderAmazonData(rakutenData);
         } else {
-          // それ以外は再描画のみ
-          renderDashboard(rakutenData, currentAmazonData);
+          // それ以外（価格、ポイント、クーポン等の更新）はダッシュボードを削除＆再作成せず、
+          // 該当要素をピンポイントで書き換え、inputイベントを発火させて裏側で計算処理を走らせる（カクつき・チラつきの完全防止）
+          const couponInput = document.getElementById("rd-input-coupon");
+          if (couponInput) {
+            // 1. クーポン入力欄の値を最新の取得値に更新
+            couponInput.value = rakutenData.coupon;
+
+            // 2. 価格表示の更新
+            const priceEl = document.getElementById("rd-rakuten-price");
+            if (priceEl) {
+              priceEl.textContent = `¥${formatNumber(rakutenData.price)}`;
+            }
+
+            // 3. ポイント表示の更新
+            const pointsEl = document.getElementById("rd-rakuten-points");
+            if (pointsEl) {
+              pointsEl.textContent = `${formatNumber(Math.abs(rakutenData.points))}pt`;
+            }
+
+            // 4. 税抜価格情報と追加ポイントシミュレーション表示の更新
+            const taxExcludedInfoEl = document.getElementById("rd-tax-excluded-info");
+            if (taxExcludedInfoEl) {
+              const currentExtraPoints = Math.floor(rakutenData.taxExcludedPrice * (rakutenData.extraPointRate / 100));
+              taxExcludedInfoEl.innerHTML = `(税抜価格 ¥${formatNumber(rakutenData.taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(currentExtraPoints))}</span>pt)`;
+            }
+
+            // 5. JANコードのコピー情報や表示の更新（JANが後から取得でき、かつAmazonデータ取得が不要な場合の対応）
+            const janCopyEl = document.getElementById("rd-copy-jan");
+            if (janCopyEl && rakutenData.janCode && !janCopyEl.getAttribute("data-copy")) {
+              janCopyEl.setAttribute("data-copy", rakutenData.janCode);
+              janCopyEl.innerHTML = `${rakutenData.janCode} <span class="rd-copy-icon">${COPY_ICON_SVG}</span>`;
+            }
+
+            // 6. inputイベントを手動で発火させて、ダッシュボード内部の updateCalculations() を動かす
+            couponInput.dispatchEvent(new Event("input"));
+            console.log(`ResearchDeck: カクつき防止用ピンポイントDOM更新を実行しました (coupon: ${rakutenData.coupon}, price: ${rakutenData.price})`);
+          } else {
+            // ダッシュボードがまだ非表示や描画前などのイレギュラーケースは、安全のために再描画を実行
+            renderDashboard(rakutenData, currentAmazonData);
+          }
         }
       }
     }, delay);
