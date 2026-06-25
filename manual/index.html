@@ -11,165 +11,61 @@
 </head>
 <body>
   <div id="app">
-    <!-- スライドコンテナ -->
-    <div class="slide-container" id="slide-container">
-      <!-- 左側：解説エリア -->
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <span class="badge" id="slide-badge">STEP 1</span>
-          <h1 id="slide-title">スライドタイトル</h1>
-        </div>
-        <div class="sidebar-content">
-          <p id="slide-description">説明文がここに入ります。</p>
-        </div>
-        <div class="sidebar-footer">
-          <div class="navigation-buttons">
-            <button id="btn-prev" class="nav-btn">◀ 前へ</button>
-            <span id="slide-counter">1 / 14</span>
-            <button id="btn-next" class="nav-btn">次へ ▶</button>
-          </div>
-        </div>
+    <div class="slide-viewer">
+      <!-- スライド画像表示エリア -->
+      <div class="slide-container">
+        <img id="slide-image" src="" alt="スライドマニュアル">
+        
+        <!-- 左右のナビゲーション矢印 -->
+        <button id="btn-prev" class="nav-arrow prev-arrow" aria-label="前へ">◀</button>
+        <button id="btn-next" class="nav-arrow next-arrow" aria-label="次へ">▶</button>
       </div>
 
-      <!-- 右側：メイン画面 -->
-      <div class="main-display">
-        <div class="image-workspace" id="image-workspace">
-          <img id="slide-image" src="" alt="スクリーンショット">
-        </div>
+      <!-- 下部コントロールバー（スライドカウンター） -->
+      <div class="control-bar">
+        <span id="slide-counter">1 / 14</span>
       </div>
     </div>
   </div>
 
   <script>
-    // スライドデータ定義
+    // 14枚のスライド定義（画像のみの軽量データ）
     const slides = [
-      {
-        id: 1,
-        badge: "START",
-        title: "Amazon SP-API\n接続キー取得マニュアル",
-        description: "このマニュアルは、ツール「ResearchDeck」の動作に必要な **4つの接続キー** をご自身のAmazonセラーアカウントから安全に取得するための手順書です。<br><br>以下の4つを取得し、最後にツールの設定画面に入力します：<br><br>1. **出品者ID (Seller ID)**<br>2. **LWA Client ID**<br>3. **LWA Client Secret**<br>4. **Refresh Token (リフレッシュトークン)**",
-        image: "output/slide_01.png"
-      },
-      {
-        id: 2,
-        badge: "STEP 1-1",
-        title: "出品者IDの取得: アカウント情報へ",
-        description: "まずはアカウント固有の「出品者ID」を取得します。<br><br>セラーセントラルトップ画面の右上にある **「設定（歯車マーク）」** をクリックし、メニューから **「出品用アカウント情報」** を選択します。",
-        image: "output/slide_02.png"
-      },
-      {
-        id: 3,
-        badge: "STEP 1-2",
-        title: "出品者IDの取得: 出品者情報へ",
-        description: "出品用アカウント情報画面が開きます。<br><br>画面左側の「登録内容」セクションにある **「出品者情報」** リンクをクリックします。",
-        image: "output/slide_03.png"
-      },
-      {
-        id: 4,
-        badge: "STEP 1-3",
-        title: "出品者IDの取得: 出品者トークンへ",
-        description: "出品者情報画面が開きます。<br><br>画面中ほどにある **「出品者トークン」** のリンクをクリックします。",
-        image: "output/slide_04.png"
-      },
-      {
-        id: 5,
-        badge: "STEP 1-4",
-        title: "出品者IDのコピー & 保存",
-        description: "画面に **「あなたの出品者トークン」** が表示されます。<br><br>これがツールで設定する **「出品者ID (Seller ID)」** です。`A`から始まる英数字をコピーして保存してください。<br><br><span class='tip'>💡 友人へ渡すマニュアル画像では、この個人情報はダミー値にマスクされています。</span>",
-        image: "output/slide_05.png"
-      },
-      {
-        id: 6,
-        badge: "STEP 2-1",
-        title: "アプリ開発画面を開く",
-        description: "次に、アプリ登録とLWA Client ID/Secretを取得します。<br><br>セラーセントラルの左上メニューから **「アプリとサービス」** ➔ **「アプリの開発」** をクリックします。",
-        image: "output/slide_06.png"
-      },
-      {
-        id: 7,
-        badge: "【補足】",
-        title: "初回のみ：ポータル登録とオンボーディング",
-        description: "「アプリの開発」を初めて開く際、新しいソリューションプロバイダーポータルへの紐付け（オンボーディング）画面が表示されることがあります。<br><br>画面の指示に従い、アカウントを選択し、Eメールの認証を完了させてください。<br><br><span class='tip'>※Eメールなどの機密情報はマスクされます。</span>",
-        image: "output/slide_07.png"
-      },
-      {
-        id: 8,
-        badge: "【補足】",
-        title: "オンボーディング：国・アカウント選択",
-        description: "利用するアカウントと言語・国を選択します。<br><br>「エメリーマートオンライン（アメリカ合衆国など該当の国）」を選択し、確定します。<br><br><span class='tip'>※アカウント名のID部分はマスクされます。</span>",
-        image: "output/slide_08.png"
-      },
-      {
-        id: 9,
-        badge: "STEP 2-2",
-        title: "ポータル画面とLWA情報の表示",
-        description: "ソリューションプロバイダーポータルのトップ画面が開きます。<br><br>登録されているアプリ（例: `NETSEA-Research-Tool`）の「LWA認証情報」列にある **「表示」** リンクをクリックします。<br><br><span class='tip'>※アプリIDやアカウント名はマスクされます。</span>",
-        image: "output/slide_09.png"
-      },
-      {
-        id: 10,
-        badge: "STEP 2-3",
-        title: "LWA Client ID / Secret の取得",
-        description: "「LWA認証情報」のポップアップが表示されます。<br><br>1. **「クライアントID」**（`amzn1.application-oa2-client.〜`）をコピーします。<br>2. **「クライアント機密情報」** アコーディオンを展開し、表示される **「Client Secret」**（`amzn1.oa2-cs.v1.〜`）をコピーします。<br><br><span class='warning'>⚠️ これらは最も重要な暗号鍵です。絶対に他人に教えないでください。</span>",
-        image: "output/slide_10.png"
-      },
-      {
-        id: 11,
-        badge: "STEP 3-1",
-        title: "リフレッシュトークン：承認メニューを開く",
-        description: "続いて、リフレッシュトークン（ツールがデータ通信を継続するための許可証）を取得します。<br><br>ポータル画面で、アプリの右端にある「アプリの編集」ボタンの右側にある **「&or;」矢印** をクリックし、メニューから **「承認」** を選択します。",
-        image: "output/slide_11.png"
-      },
-      {
-        id: 12,
-        badge: "STEP 3-2",
-        title: "リフレッシュトークン：アプリの認可",
-        description: "「認可の管理」画面に切り替わります。<br><br>マーケットプレイス「日本」の右側にある **「アプリを承認」** ボタンをクリックします。",
-        image: "output/slide_12.png"
-      },
-      {
-        id: 13,
-        badge: "STEP 3-3",
-        title: "リフレッシュトークンのコピー",
-        description: "承認が完了すると、画面に **リフレッシュトークン（Refresh Token）** が発行されます。<br><br>非常に長い英数字の文字列（`Atzr|〜`）が表示されるので、**「コピー」** をクリックして保存します。<br><br><span class='warning'>⚠️ リフレッシュトークンは、この画面を一度閉じると再表示できません。必ずここでコピーしてください！</span>",
-        image: "output/slide_13.png"
-      },
-      {
-        id: 14,
-        badge: "STEP 4",
-        title: "ツール「ResearchDeck」への設定",
-        description: "コピーした4つのキーを、ResearchDeckのオプション設定画面に入力します。<br><br>1. **LWA Client ID**<br>2. **LWA Client Secret**<br>3. **Refresh Token**<br>4. **Seller ID (出品者ID)**<br><br>を入力し、**「接続テスト」** ボタンを押して「接続成功」となることを確認します。最後に **「保存」** をクリックして完了です！",
-        image: "output/slide_14.png"
-      }
+      { id: 1, image: "output/slide_01.png" },
+      { id: 2, image: "output/slide_02.png" },
+      { id: 3, image: "output/slide_03.png" },
+      { id: 4, image: "output/slide_04.png" },
+      { id: 5, image: "output/slide_05.png" },
+      { id: 6, image: "output/slide_06.png" },
+      { id: 7, image: "output/slide_07.png" },
+      { id: 8, image: "output/slide_08.png" },
+      { id: 9, image: "output/slide_09.png" },
+      { id: 10, image: "output/slide_10.png" },
+      { id: 11, image: "output/slide_11.png" },
+      { id: 12, image: "output/slide_12.png" },
+      { id: 13, image: "output/slide_13.png" },
+      { id: 14, image: "output/slide_14.png" }
     ];
 
     let currentSlideIndex = 0;
 
     // DOM要素の取得
-    const slideCounter = document.getElementById("slide-counter");
-    const slideBadge = document.getElementById("slide-badge");
-    const slideTitle = document.getElementById("slide-title");
-    const slideDescription = document.getElementById("slide-description");
     const slideImage = document.getElementById("slide-image");
+    const slideCounter = document.getElementById("slide-counter");
     const btnPrev = document.getElementById("btn-prev");
     const btnNext = document.getElementById("btn-next");
 
     // スライド切り替え表示関数
     function renderSlide(index) {
       const slide = slides[index];
-      
-      // テキスト・画像の設定
-      slideBadge.textContent = slide.badge;
-      slideTitle.innerHTML = slide.title.replace(/\n/g, "<br>");
-      slideDescription.innerHTML = slide.description;
       slideImage.src = slide.image;
       
       // カウンター更新
       slideCounter.textContent = `${index + 1} / ${slides.length}`;
       
-      // ボタン有効状態
-      btnPrev.disabled = index === 0;
-      btnNext.disabled = index === slides.length - 1;
+      // ボタン有効/無効状態（最初のスライドでは「前へ」を隠す/無効にし、最後のスライドでは「次へ」を隠す/無効にする）
+      btnPrev.style.visibility = index === 0 ? "hidden" : "visible";
+      btnNext.style.visibility = index === slides.length - 1 ? "hidden" : "visible";
     }
 
     // ナビゲーションイベント
@@ -180,7 +76,6 @@
       }
     });
 
-    // ナビゲーションイベント
     btnNext.addEventListener("click", () => {
       if (currentSlideIndex < slides.length - 1) {
         currentSlideIndex++;
@@ -191,9 +86,9 @@
     // キーボード操作のサポート
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft" || e.key === "Left") {
-        btnPrev.click();
+        if (currentSlideIndex > 0) btnPrev.click();
       } else if (e.key === "ArrowRight" || e.key === "Right") {
-        btnNext.click();
+        if (currentSlideIndex < slides.length - 1) btnNext.click();
       }
     });
 
