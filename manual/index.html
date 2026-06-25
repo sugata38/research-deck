@@ -25,23 +25,16 @@
         <div class="sidebar-footer">
           <div class="navigation-buttons">
             <button id="btn-prev" class="nav-btn">◀ 前へ</button>
-            <span id="slide-counter">1 / 10</span>
+            <span id="slide-counter">1 / 14</span>
             <button id="btn-next" class="nav-btn">次へ ▶</button>
-          </div>
-          <div class="debug-controls">
-            <label><input type="checkbox" id="chk-debug" checked> 座標デバッグモード</label>
-            <div id="debug-output" class="debug-output">画像上をドラッグして座標を取得</div>
           </div>
         </div>
       </div>
 
-      <!-- 右側：メイン画面（画像＋オーバーレイ） -->
+      <!-- 右側：メイン画面 -->
       <div class="main-display">
         <div class="image-workspace" id="image-workspace">
           <img id="slide-image" src="" alt="スクリーンショット">
-          <div id="overlay-layer" class="overlay-layer"></div>
-          <!-- ドラッグ時のプレビュー枠 -->
-          <div id="drag-preview" class="drag-preview"></div>
         </div>
       </div>
     </div>
@@ -49,195 +42,104 @@
 
   <script>
     // スライドデータ定義
-            const slides = [
+    const slides = [
       {
         id: 1,
         badge: "START",
         title: "Amazon SP-API\n接続キー取得マニュアル",
         description: "このマニュアルは、ツール「ResearchDeck」の動作に必要な **4つの接続キー** をご自身のAmazonセラーアカウントから安全に取得するための手順書です。<br><br>以下の4つを取得し、最後にツールの設定画面に入力します：<br><br>1. **出品者ID (Seller ID)**<br>2. **LWA Client ID**<br>3. **LWA Client Secret**<br>4. **Refresh Token (リフレッシュトークン)**",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.53.47@2x.png",
-        overlays: [
-          // 表紙なので全体を少し暗くマスクするのみ
-          { type: "mask-blur", top: "0%", left: "0%", width: "100%", height: "100%", text: "Amazon SP-API\n接続マニュアル" }
-        ]
+        image: "output/slide_01.png"
       },
       {
         id: 2,
         badge: "STEP 1-1",
         title: "出品者IDの取得: アカウント情報へ",
         description: "まずはアカウント固有の「出品者ID」を取得します。<br><br>セラーセントラルトップ画面の右上にある **「設定（歯車マーク）」** をクリックし、メニューから **「出品用アカウント情報」** を選択します。",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.53.54@2x.png",
-        overlays: [
-          // ⚙アイコン
-          { type: "rect-red", top: "17.6%", left: "89.9%", width: "1.7%", height: "2.0%" },
-          // 出品用アカウント情報
-          { type: "rect-red", top: "21.0%", left: "85.0%", width: "10.0%", height: "2.2%" }
-        ]
+        image: "output/slide_02.png"
       },
       {
         id: 3,
         badge: "STEP 1-2",
         title: "出品者IDの取得: 出品者情報へ",
         description: "出品用アカウント情報画面が開きます。<br><br>画面左側の「登録内容」セクションにある **「出品者情報」** リンクをクリックします。",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.54.01@2x.png",
-        overlays: [
-          // 出品者情報の強調
-          { type: "rect-red", top: "41.0%", left: "1.7%", width: "6.5%", height: "2.6%" }
-        ]
+        image: "output/slide_03.png"
       },
       {
         id: 4,
         badge: "STEP 1-3",
-        title: "出品者ID of the token link",
         title: "出品者IDの取得: 出品者トークンへ",
         description: "出品者情報画面が開きます。<br><br>画面中ほどにある **「出品者トークン」** のリンクをクリックします。",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.54.34@2x.png",
-        overlays: [
-          // 出品者トークンリンクの強調
-          { type: "rect-red", top: "58.8%", left: "47.4%", width: "7.0%", height: "2.6%" }
-        ]
+        image: "output/slide_04.png"
       },
       {
         id: 5,
         badge: "STEP 1-4",
         title: "出品者IDのコピー & 保存",
-        description: "画面に **「あなたの出品者トークン」** が表示されます。<br><br>これがツールで設定する **「出品者ID (Seller ID)」** です。`A`から始まる英数字をコピーして保存してください。<br><br><span class='tip'>💡 友人へ渡すマニュアル画像では、この個人情報はダミー値にマスクされます。</span>",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.54.42@2x.png",
-        overlays: [
-          // トークンの値を隠すマスク
-          { type: "mask-text", top: "57.3%", left: "23.7%", width: "9.0%", height: "2.6%", text: "A1XXXXXXXXXXXX" },
-          // 赤枠での強調
-          { type: "rect-red", top: "56.8%", left: "23.2%", width: "22.2%", height: "3.6%" }
-        ]
+        description: "画面に **「あなたの出品者トークン」** が表示されます。<br><br>これがツールで設定する **「出品者ID (Seller ID)」** です。`A`から始まる英数字をコピーして保存してください。<br><br><span class='tip'>💡 友人へ渡すマニュアル画像では、この個人情報はダミー値にマスクされています。</span>",
+        image: "output/slide_05.png"
       },
       {
         id: 6,
         badge: "STEP 2-1",
         title: "アプリ開発画面を開く",
         description: "次に、アプリ登録とLWA Client ID/Secretを取得します。<br><br>セラーセントラルの左上メニューから **「アプリとサービス」** ➔ **「アプリの開発」** をクリックします。",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.55.04@2x.png",
-        overlays: [
-          // アプリの開発の強調
-          { type: "rect-red", top: "87.6%", left: "17.0%", width: "10.0%", height: "2.6%" }
-        ]
+        image: "output/slide_06.png"
       },
       {
         id: 7,
         badge: "【補足】",
         title: "初回のみ：ポータル登録とオンボーディング",
         description: "「アプリの開発」を初めて開く際、新しいソリューションプロバイダーポータルへの紐付け（オンボーディング）画面が表示されることがあります。<br><br>画面の指示に従い、アカウントを選択し、Eメールの認証を完了させてください。<br><br><span class='tip'>※Eメールなどの機密情報はマスクされます。</span>",
-        image: "../screenshot/CleanShot 2026-06-25 at 20.11.44@2x.png",
-        overlays: [
-          // メールアドレスのマスク
-          { type: "mask-text", top: "69.0%", left: "11.0%", width: "16.0%", height: "3.0%", text: "your-email@example.com" },
-          { type: "mask-text", top: "69.0%", left: "40.0%", width: "20.0%", height: "3.0%", text: "your-email@example.com" },
-          { type: "mask-text", top: "64.8%", left: "39.5%", width: "12.0%", height: "4.0%", text: "Your Brand Name" }
-        ]
+        image: "output/slide_07.png"
       },
       {
         id: 8,
         badge: "【補足】",
         title: "オンボーディング：国・アカウント選択",
         description: "利用するアカウントと言語・国を選択します。<br><br>「エメリーマートオンライン（アメリカ合衆国など該当の国）」を選択し、確定します。<br><br><span class='tip'>※アカウント名のID部分はマスクされます。</span>",
-        image: "../screenshot/CleanShot 2026-06-25 at 20.11.57@2x.png",
-        overlays: [
-          // アカウント名とIDのマスク
-          { type: "mask-text", top: "41.6%", left: "28.0%", width: "26.0%", height: "3.0%", text: "BR - AOPFQN5KR3A1N_A1VCXXXXXXXXXX" }
-        ]
+        image: "output/slide_08.png"
       },
       {
         id: 9,
         badge: "STEP 2-2",
         title: "ポータル画面とLWA情報の表示",
         description: "ソリューションプロバイダーポータルのトップ画面が開きます。<br><br>登録されているアプリ（例: `NETSEA-Research-Tool`）の「LWA認証情報」列にある **「表示」** リンクをクリックします。<br><br><span class='tip'>※アプリIDやアカウント名はマスクされます。</span>",
-        image: "../screenshot/CleanShot 2026-06-25 at 20.12.08@2x.png",
-        overlays: [
-          // ブランドマスク
-          { type: "mask-text", top: "17.8%", left: "14.3%", width: "12.2%", height: "2.6%", text: "Your Brand Name" },
-          // 表示リンクの強調
-          { type: "rect-red", top: "89.0%", left: "67.5%", width: "4.0%", height: "2.9%" },
-          // アプリIDのマスク
-          { type: "mask-text", top: "92.0%", left: "5.5%", width: "26.8%", height: "2.6%", text: "amzn1.sp.solution.b6ad0ffa-fef2-xxxx..." }
-        ]
+        image: "output/slide_09.png"
       },
       {
         id: 10,
         badge: "STEP 2-3",
         title: "LWA Client ID / Secret の取得",
         description: "「LWA認証情報」のポップアップが表示されます。<br><br>1. **「クライアントID」**（`amzn1.application-oa2-client.〜`）をコピーします。<br>2. **「クライアント機密情報」** アコーディオンを展開し、表示される **「Client Secret」**（`amzn1.oa2-cs.v1.〜`）をコピーします。<br><br><span class='warning'>⚠️ これらは最も重要な暗号鍵です。絶対に他人に教えないでください。</span>",
-        image: "../screenshot/CleanShot 2026-06-25 at 20.12.22@2x.png",
-        overlays: [
-          // Client IDのマスク
-          { type: "mask-text", top: "55.1%", left: "30.8%", width: "38.4%", height: "3.0%", text: "amzn1.application-oa2-client.xxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
-          // Client Secretのマスク
-          { type: "mask-text", top: "60.4%", left: "30.8%", width: "38.4%", height: "3.0%", text: "amzn1.oa2-cs.v1.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
-          // 各値の赤枠強調
-          { type: "rect-red", top: "54.6%", left: "30.5%", width: "39.0%", height: "4.0%" },
-          { type: "rect-red", top: "59.9%", left: "30.5%", width: "39.0%", height: "4.0%" }
-        ]
+        image: "output/slide_10.png"
       },
       {
         id: 11,
         badge: "STEP 3-1",
         title: "リフレッシュトークン：承認メニューを開く",
         description: "続いて、リフレッシュトークン（ツールがデータ通信を継続するための許可証）を取得します。<br><br>ポータル画面で、アプリの右端にある「アプリの編集」ボタンの右側にある **「&or;」矢印** をクリックし、メニューから **「承認」** を選択します。",
-        image: "../screenshot/CleanShot 2026-06-25 at 21.03.04@2x.png",
-        overlays: [
-          // 矢印ボタンと「承認」ポップアップの強調
-          { type: "rect-red", top: "82.3%", left: "86.0%", width: "1.9%", height: "4.7%" },
-          { type: "rect-red", top: "86.8%", left: "77.6%", width: "10.1%", height: "5.7%" },
-          // ブランドマスク、アプリIDマスク
-          { type: "mask-text", top: "17.8%", left: "14.3%", width: "12.2%", height: "2.6%", text: "Your Brand Name" },
-          { type: "mask-text", top: "85.8%", left: "5.5%", width: "26.8%", height: "2.6%", text: "amzn1.sp.solution.b6ad0ffa-fef2-xxxx..." }
-        ]
+        image: "output/slide_11.png"
       },
       {
         id: 12,
         badge: "STEP 3-2",
         title: "リフレッシュトークン：アプリの認可",
         description: "「認可の管理」画面に切り替わります。<br><br>マーケットプレイス「日本」の右側にある **「アプリを承認」** ボタンをクリックします。",
-        image: "../screenshot/CleanShot 2026-06-25 at 21.03.44@2x.png",
-        overlays: [
-          // アカウント名マスク、ブランド名マスク、アプリIDマスク
-          { type: "mask-text", top: "17.8%", left: "14.3%", width: "12.2%", height: "2.6%", text: "Your Brand Name" },
-          { type: "mask-text", top: "46.2%", left: "4.0%", width: "10.0%", height: "2.6%", text: "Your Brand" },
-          { type: "mask-text", top: "31.0%", left: "43.5%", width: "26.8%", height: "2.6%", text: "amzn1.sp.solution.b6ad0ffa-fef2-xxxx..." },
-          // 認可ボタン赤枠
-          { type: "rect-red", top: "54.2%", left: "85.8%", width: "10.5%", height: "3.5%" }
-        ]
+        image: "output/slide_12.png"
       },
       {
         id: 13,
         badge: "STEP 3-3",
         title: "リフレッシュトークンのコピー",
         description: "承認が完了すると、画面に **リフレッシュトークン（Refresh Token）** が発行されます。<br><br>非常に長い英数字の文字列（`Atzr|〜`）が表示されるので、**「コピー」** をクリックして保存します。<br><br><span class='warning'>⚠️ リフレッシュトークンは、この画面を一度閉じると再表示できません。必ずここでコピーしてください！</span>",
-        image: "../screenshot/CleanShot 2026-06-25 at 21.03.56@2x.png",
-        overlays: [
-          // トークンのマスク
-          { type: "mask-text", top: "55.0%", left: "19.3%", width: "60.5%", height: "3.2%", text: "Atzr|IwEBINL9fetBQNEBjGdHPfjCklTbVyTJuB3NaVR5O_5xLO6ajYQ91EH4oCCd3sYjUKGbZ5kgB9P6JofnoMKxOa2fwa8vx9nSoy5DESbYnK..." },
-          // コピーリンクの強調 (赤枠)
-          { type: "rect-red", top: "54.2%", left: "80.6%", width: "3.0%", height: "4.2%" },
-          // ログインアカウント名、アプリID、ブランド名のマスク
-          { type: "mask-text", top: "17.8%", left: "14.3%", width: "12.2%", height: "2.6%", text: "Your Brand Name" },
-          { type: "mask-text", top: "31.0%", left: "43.5%", width: "26.8%", height: "2.6%", text: "amzn1.sp.solution.b6ad0ffa-fef2-xxxx..." },
-          { type: "mask-text", top: "46.2%", left: "4.0%", width: "10.0%", height: "2.6%", text: "Your Brand" }
-        ]
+        image: "output/slide_13.png"
       },
       {
         id: 14,
         badge: "STEP 4",
         title: "ツール「ResearchDeck」への設定",
         description: "コピーした4つのキーを、ResearchDeckのオプション設定画面に入力します。<br><br>1. **LWA Client ID**<br>2. **LWA Client Secret**<br>3. **Refresh Token**<br>4. **Seller ID (出品者ID)**<br><br>を入力し、**「接続テスト」** ボタンを押して「接続成功」となることを確認します。最後に **「保存」** をクリックして完了です！",
-        image: "../screenshot/CleanShot 2026-06-25 at 19.53.28@2x.png",
-        overlays: [
-          // 入力キーすべてのマスク
-          { type: "mask-text", top: "49.5%", left: "37.5%", width: "45.0%", height: "3.0%", text: "amzn1.application-oa2-client.xxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
-          { type: "mask-text", top: "57.4%", left: "37.5%", width: "45.0%", height: "3.0%", text: "amzn1.oa2-cs.v1.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
-          { type: "mask-text", top: "65.4%", left: "37.5%", width: "45.0%", height: "3.0%", text: "Atzr|IwEBINL9fetBQNEBjGdHPfjCklTbVyTJuB3NaVR5O_5xLO6ajYQ91EH4oCCd3sYj..." },
-          { type: "mask-text", top: "73.5%", left: "37.5%", width: "45.0%", height: "3.0%", text: "A1XXXXXXXXXXXX" },
-          // 接続テスト成功バッジと保存ボタンの強調
-          { type: "rect-red", top: "81.2%", left: "37.2%", width: "45.6%", height: "5.5%" }
-        ]
+        image: "output/slide_14.png"
       }
     ];
 
@@ -249,13 +151,8 @@
     const slideTitle = document.getElementById("slide-title");
     const slideDescription = document.getElementById("slide-description");
     const slideImage = document.getElementById("slide-image");
-    const overlayLayer = document.getElementById("overlay-layer");
     const btnPrev = document.getElementById("btn-prev");
     const btnNext = document.getElementById("btn-next");
-    const chkDebug = document.getElementById("chk-debug");
-    const debugOutput = document.getElementById("debug-output");
-    const imageWorkspace = document.getElementById("image-workspace");
-    const dragPreview = document.getElementById("drag-preview");
 
     // スライド切り替え表示関数
     function renderSlide(index) {
@@ -273,34 +170,6 @@
       // ボタン有効状態
       btnPrev.disabled = index === 0;
       btnNext.disabled = index === slides.length - 1;
-      
-      // オーバーレイのクリアと再生成
-      overlayLayer.innerHTML = "";
-      
-      // 画像ロード後にオーバーレイを設定
-      slideImage.onload = () => {
-        if (slide.overlays) {
-          slide.overlays.forEach(overlay => {
-            const el = document.createElement("div");
-            el.className = `overlay-item ${overlay.type}`;
-            el.style.top = overlay.top;
-            el.style.left = overlay.left;
-            el.style.width = overlay.width;
-            el.style.height = overlay.height;
-            
-            if (overlay.text) {
-              el.textContent = overlay.text;
-            }
-            
-            overlayLayer.appendChild(el);
-          });
-        }
-      };
-      
-      // すでに画像がキャッシュされている場合の対策
-      if (slideImage.complete) {
-        slideImage.onload();
-      }
     }
 
     // ナビゲーションイベント
@@ -311,6 +180,7 @@
       }
     });
 
+    // ナビゲーションイベント
     btnNext.addEventListener("click", () => {
       if (currentSlideIndex < slides.length - 1) {
         currentSlideIndex++;
@@ -325,72 +195,6 @@
       } else if (e.key === "ArrowRight" || e.key === "Right") {
         btnNext.click();
       }
-    });
-
-    // --- 座標デバッグモード (ドラッグして％座標を取得するツール) ---
-    let isDragging = false;
-    let startX = 0, startY = 0;
-
-    imageWorkspace.addEventListener("mousedown", (e) => {
-      if (!chkDebug.checked) return;
-      
-      // 画像の実際のバウンディングボックスを取得
-      const rect = slideImage.getBoundingClientRect();
-      
-      // クリック位置が画像範囲内かチェック
-      if (e.clientX >= rect.left && e.clientX <= rect.right &&
-          e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        
-        isDragging = true;
-        startX = e.clientX - rect.left;
-        startY = e.clientY - rect.top;
-        
-        dragPreview.style.display = "block";
-        dragPreview.style.left = `${(startX / rect.width) * 100}%`;
-        dragPreview.style.top = `${(startY / rect.height) * 100}%`;
-        dragPreview.style.width = "0%";
-        dragPreview.style.height = "0%";
-        
-        e.preventDefault();
-      }
-    });
-
-    window.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-      
-      const rect = slideImage.getBoundingClientRect();
-      const currentX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-      const currentY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-      
-      const left = Math.min(startX, currentX);
-      const top = Math.min(startY, currentY);
-      const width = Math.abs(startX - currentX);
-      const height = Math.abs(startY - currentY);
-      
-      dragPreview.style.left = `${(left / rect.width) * 100}%`;
-      dragPreview.style.top = `${(top / rect.height) * 100}%`;
-      dragPreview.style.width = `${(width / rect.width) * 100}%`;
-      dragPreview.style.height = `${(height / rect.height) * 100}%`;
-    });
-
-    window.addEventListener("mouseup", (e) => {
-      if (!isDragging) return;
-      isDragging = false;
-      
-      const rect = slideImage.getBoundingClientRect();
-      const currentX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-      const currentY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-      
-      const leftPct = ((Math.min(startX, currentX) / rect.width) * 100).toFixed(1);
-      const topPct = ((Math.min(startY, currentY) / rect.height) * 100).toFixed(1);
-      const widthPct = ((Math.abs(startX - currentX) / rect.width) * 100).toFixed(1);
-      const heightPct = ((Math.abs(startY - currentY) / rect.height) * 100).toFixed(1);
-      
-      dragPreview.style.display = "none";
-      
-      // 座標情報の出力
-      const coordStr = `{ type: "rect-red", top: "${topPct}%", left: "${leftPct}%", width: "${widthPct}%", height: "${heightPct}%" }`;
-      debugOutput.innerHTML = `座標コード (クリックしてコピー):<br><textarea onclick="this.select(); document.execCommand('copy')" style="width:100%; height:45px; font-size:11px; margin-top:5px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; padding:3px; box-sizing:border-box; resize:none;">${coordStr}</textarea>`;
     });
 
     // URLパラメータからスライド番号 (1-indexed) を取得して初期表示スライドを決定
