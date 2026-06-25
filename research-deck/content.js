@@ -890,10 +890,18 @@ function renderDashboard(rakutenData, amazonData) {
       const pageTitle = document.title || "";
       const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
       const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-      newRakutenData.taxExcludedPrice = Math.floor(newRakutenData.price / (1 + initialTaxRate));
+      const discountedPrice = Math.max(0, newRakutenData.price - newRakutenData.coupon);
+      newRakutenData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
+      
+      // クーポン値引き後の基本ポイントを再計算
+      const discountedPoints = newRakutenData.price > 0 
+        ? Math.floor(newRakutenData.rawPoints * (discountedPrice / newRakutenData.price)) 
+        : 0;
+      newRakutenData.points = discountedPoints;
+
       const extraPoints = Math.floor(newRakutenData.taxExcludedPrice * (savedExtraRate / 100));
       newRakutenData.extraPoints = Math.abs(extraPoints);
-      newRakutenData.netCost = newRakutenData.price - Math.abs(newRakutenData.points) - Math.abs(extraPoints) - newRakutenData.coupon;
+      newRakutenData.netCost = newRakutenData.price - discountedPoints - Math.abs(extraPoints) - newRakutenData.coupon;
       if (newRakutenData.janCode) {
         await fetchAndRenderAmazonData(newRakutenData);
       } else {
@@ -931,10 +939,31 @@ function renderDashboard(rakutenData, amazonData) {
     const extraPointRate = parseInt(extraPointInput?.value || 0, 10);
     const couponValue = parseInt(couponInput?.value || 0, 10);
     localStorage.setItem("rd-extra-point-rate", extraPointRate);
-    const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (extraPointRate / 100));
-    const extraPointsDisplayEl = document.getElementById("rd-extra-points-display");
-    if (extraPointsDisplayEl) extraPointsDisplayEl.textContent = `${formatNumber(Math.abs(extraPoints))}`;
-    const netCost = rakutenData.price - rakutenData.points - Math.abs(extraPoints) - couponValue;
+
+    // クーポン値引き後の基本ポイントを動的に再計算して表示を更新
+    const discountedPrice = Math.max(0, rakutenData.price - couponValue);
+    const discountedPoints = rakutenData.price > 0 
+      ? Math.floor(rakutenData.rawPoints * (discountedPrice / rakutenData.price)) 
+      : 0;
+
+    const pointsDisplayEl = document.getElementById("rd-rakuten-points");
+    if (pointsDisplayEl) {
+      pointsDisplayEl.textContent = `${formatNumber(discountedPoints)}pt`;
+    }
+
+    // クーポン値引き後の価格から税抜価格を動的に再計算する
+    const categoryName = (currentAmazonData && currentAmazonData.categoryName) || "";
+    const taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, categoryName);
+
+    const extraPoints = Math.floor(taxExcludedPrice * (extraPointRate / 100));
+
+    // 税抜価格表示とシミュレーションポイント表示を更新
+    const taxExcludedInfoEl = document.getElementById("rd-tax-excluded-info");
+    if (taxExcludedInfoEl) {
+      taxExcludedInfoEl.innerHTML = `(税抜価格 ¥${formatNumber(taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(extraPoints))}</span>pt)`;
+    }
+
+    const netCost = rakutenData.price - discountedPoints - Math.abs(extraPoints) - couponValue;
     const rakutenNetCostEl = document.getElementById("rd-rakuten-net-cost");
     if (rakutenNetCostEl) rakutenNetCostEl.textContent = `¥${formatNumber(netCost)}`;
     const amazonNetCostEl = document.getElementById("rd-amazon-net-cost");
@@ -1084,6 +1113,7 @@ function extractRakutenData(doc = document) {
     janCode,
     price,
     points: absolutePoints,
+    rawPoints: absolutePoints, // クーポン値引き前の生のポイント
     coupon,
     netCost: price - absolutePoints - coupon
   };
@@ -1103,15 +1133,22 @@ async function fetchAndRenderAmazonData(rakutenData) {
     removeAmazonLoading();
     
     if (result && result.success && result.data) {
-      // 食品判定などの税率自動計算のため、税抜価格を再計算
-      rakutenData.taxExcludedPrice = calculateTaxExcludedPrice(rakutenData.price, result.data.categoryName);
+      // 食品判定などの税率自動計算のため、税抜価格を再計算（クーポン値引き後）
+      const discountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
+      rakutenData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, result.data.categoryName);
       
+      // クーポン値引き後の基本ポイントを再計算
+      const discountedPoints = rakutenData.price > 0 
+        ? Math.floor(rakutenData.rawPoints * (discountedPrice / rakutenData.price)) 
+        : 0;
+      rakutenData.points = discountedPoints; // 計算・表示用に上書き
+
       // 追加ポイント
       const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
       rakutenData.extraPointRate = savedExtraRate;
       const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
       rakutenData.extraPoints = Math.abs(extraPoints);
-      rakutenData.netCost = rakutenData.price - Math.abs(rakutenData.points) - Math.abs(extraPoints) - rakutenData.coupon;
+      rakutenData.netCost = rakutenData.price - discountedPoints - Math.abs(extraPoints) - rakutenData.coupon;
       
       currentAmazonData = result.data;
       renderDashboard(rakutenData, result.data);
@@ -1170,16 +1207,23 @@ async function initializeDetailPage() {
   const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
   rakutenData.extraPointRate = savedExtraRate;
   
-  // 税抜価格の計算（初期はカテゴリ名がわからないため、タイトルキーワードで簡易食品判定）
+  // クーポン値引き後の税込価格と基本ポイントを計算
+  const initialDiscountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
+  const initialDiscountedPoints = rakutenData.price > 0 
+    ? Math.floor(rakutenData.rawPoints * (initialDiscountedPrice / rakutenData.price)) 
+    : 0;
+  rakutenData.points = initialDiscountedPoints; // 計算・表示用に初期値を上書き
+
+  // 税抜価格の計算（初期はカテゴリ名がわからないため、タイトルキーワードで簡易食品判定、かつクーポン値引き後をベースとする）
   const pageTitle = document.title || "";
   const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
   const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-  rakutenData.taxExcludedPrice = Math.floor(rakutenData.price / (1 + initialTaxRate));
+  rakutenData.taxExcludedPrice = Math.floor(initialDiscountedPrice / (1 + initialTaxRate));
 
   const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
   // 常に絶対値で保持し、符号の混入を防止する
   rakutenData.extraPoints = Math.abs(extraPoints);
-  rakutenData.netCost = rakutenData.price - Math.abs(rakutenData.points) - Math.abs(extraPoints) - rakutenData.coupon;
+  rakutenData.netCost = rakutenData.price - initialDiscountedPoints - Math.abs(extraPoints) - rakutenData.coupon;
 
   console.log("ResearchDeck: 抽出結果", rakutenData);
 
@@ -1237,17 +1281,29 @@ async function initializeDetailPage() {
         const pageTitle = document.title || "";
         const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
         const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-        rakutenData.taxExcludedPrice = Math.floor(rakutenData.price / (1 + initialTaxRate));
+        const discountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
+        rakutenData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
         updated = true;
       }
 
       if (updated) {
+        // クーポン値引き等を反映させて税抜価格を再計算
+        const categoryName = (currentAmazonData && currentAmazonData.categoryName) || "";
+        const discountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
+        rakutenData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, categoryName);
+
+        // クーポン値引き後の基本ポイントを再計算
+        const discountedPoints = rakutenData.price > 0 
+          ? Math.floor(rakutenData.rawPoints * (discountedPrice / rakutenData.price)) 
+          : 0;
+        rakutenData.points = discountedPoints;
+
         // 追加ポイントと実質仕入れ値を再計算
         const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
         rakutenData.extraPointRate = savedExtraRate;
         const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
         rakutenData.extraPoints = Math.abs(extraPoints);
-        rakutenData.netCost = rakutenData.price - Math.abs(rakutenData.points) - Math.abs(extraPoints) - rakutenData.coupon;
+        rakutenData.netCost = rakutenData.price - discountedPoints - Math.abs(extraPoints) - rakutenData.coupon;
 
         // JANコードが新しく取得できた場合はAmazonデータも取得し直すため、全体再描画を伴うfetchを実行
         if (rakutenData.janCode && (!currentAmazonData || currentAmazonData.error)) {
