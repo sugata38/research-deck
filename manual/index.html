@@ -3,96 +3,386 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Amazon SP-API 接続キー取得マニュアル</title>
+  <title>ResearchDeck - SP-API接続キー取得マニュアル</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="app">
-    <div class="slide-viewer">
-      <!-- スライド画像表示エリア -->
-      <div class="slide-container">
-        <img id="slide-image" src="" alt="スライドマニュアル">
-        
-        <!-- 左右のナビゲーション矢印 -->
-        <button id="btn-prev" class="nav-arrow prev-arrow" aria-label="前へ">◀</button>
-        <button id="btn-next" class="nav-arrow next-arrow" aria-label="次へ">▶</button>
+  <div id="rd-manual-app">
+    <!-- 左側：ステップ目次ナビゲーション -->
+    <aside class="rd-sidebar">
+      <div class="rd-sidebar-header">
+        <span class="rd-logo-icon">◈</span>
+        <h2>ResearchDeck</h2>
+        <p>接続キー取得ガイド</p>
       </div>
+      <nav class="rd-step-list" id="rd-step-list">
+        <!-- JSで動的にステップアイテムを挿入します -->
+      </nav>
+    </aside>
 
-      <!-- 下部コントロールバー（スライドカウンター） -->
-      <div class="control-bar">
-        <span id="slide-counter">1 / 14</span>
+    <!-- 中央：メインコンテンツエリア -->
+    <main class="rd-main-content">
+      <!-- 上部：手順テキスト解説 -->
+      <section class="rd-step-text-panel">
+        <div class="rd-badge" id="rd-slide-badge">START</div>
+        <h1 class="rd-step-title" id="rd-slide-title">マニュアル読み込み中...</h1>
+        <div class="rd-step-description" id="rd-slide-description">
+          読み込み中...
+        </div>
+      </section>
+
+      <!-- 中央：画像スライドショー -->
+      <section class="rd-image-viewport">
+        <div class="rd-slide-container" id="rd-zoom-trigger">
+          <img id="rd-slide-image" src="" alt="手順解説画像">
+          <div class="rd-image-overlay-tip">画像をクリックして拡大</div>
+        </div>
+        
+        <!-- 画像左右のナビゲーション矢印 -->
+        <button id="rd-btn-prev-arrow" class="rd-nav-arrow rd-prev-arrow" aria-label="前へ">◀</button>
+        <button id="rd-btn-next-arrow" class="rd-nav-arrow rd-next-arrow" aria-label="次へ">▶</button>
+      </section>
+
+      <!-- 下部：操作コントロールバー -->
+      <footer class="rd-control-bar">
+        <button id="rd-btn-prev" class="rd-control-btn">◀ 前のステップ</button>
+        <div class="rd-counter-badge" id="rd-slide-counter">1 / 14</div>
+        <button id="rd-btn-next" class="rd-control-btn rd-btn-primary">次のステップ ▶</button>
+      </footer>
+    </main>
+
+    <!-- 右側：接続キー一時メモ帳（プレミアム機能） -->
+    <aside class="rd-notes-sidebar">
+      <div class="rd-notes-header">
+        <h3>📝 接続キー取得メモ</h3>
+        <p>セラーセントラルから取得したキーを一時的にここにコピペして整理できます。データはブラウザに自動で保存されます。</p>
       </div>
-    </div>
+      <div class="rd-notes-body">
+        <div class="rd-note-field">
+          <label for="memo-seller-id">出品者ID (Seller ID)</label>
+          <input type="text" id="memo-seller-id" placeholder="A1XXXXXXXXXXXXX">
+        </div>
+        <div class="rd-note-field">
+          <label for="memo-client-id">LWA Client ID</label>
+          <input type="text" id="memo-client-id" placeholder="amzn1.application-oa2-client.xxxx...">
+        </div>
+        <div class="rd-note-field">
+          <label for="memo-client-secret">LWA Client Secret</label>
+          <input type="password" id="memo-client-secret" placeholder="amzn1.oa2-cs.v1.xxxx...">
+        </div>
+        <div class="rd-note-field">
+          <label for="memo-refresh-token">Refresh Token</label>
+          <textarea id="memo-refresh-token" placeholder="Atzr|xxxx..."></textarea>
+        </div>
+      </div>
+      <div class="rd-notes-footer">
+        <button id="rd-clear-notes-btn" class="rd-btn-clear">入力内容をクリア</button>
+      </div>
+    </aside>
   </div>
 
+  <!-- 画像拡大ズームモーダル -->
+  <div id="rd-zoom-modal" class="rd-modal" hidden>
+    <span class="rd-modal-close" id="rd-zoom-close">&times;</span>
+    <img class="rd-modal-content" id="rd-zoom-image" alt="拡大画像">
+    <div id="rd-zoom-caption"></div>
+  </div>
+
+  <!-- コピー完了通知トースト -->
+  <div id="rd-toast" class="rd-toast" hidden>コピーしました！</div>
+
   <script>
-    // 14枚のスライド定義（画像のみの軽量データ）
+    // 14枚のスライド手順と詳細テキストの定義
     const slides = [
-      { id: 1, image: "output/slide_01.png" },
-      { id: 2, image: "output/slide_02.png" },
-      { id: 3, image: "output/slide_03.png" },
-      { id: 4, image: "output/slide_04.png" },
-      { id: 5, image: "output/slide_05.png" },
-      { id: 6, image: "output/slide_06.png" },
-      { id: 7, image: "output/slide_07.png" },
-      { id: 8, image: "output/slide_08.png" },
-      { id: 9, image: "output/slide_09.png" },
-      { id: 10, image: "output/slide_10.png" },
-      { id: 11, image: "output/slide_11.png" },
-      { id: 12, image: "output/slide_12.png" },
-      { id: 13, image: "output/slide_13.png" },
-      { id: 14, image: "output/slide_14.png" }
+      {
+        id: 1,
+        badge: "START",
+        title: "Amazon SP-API 接続キー取得マニュアル",
+        description: "このマニュアルは、ツール「ResearchDeck」の動作に必要な **4つの接続キー** をご自身のAmazonセラーアカウントから取得するための手順書です。<br><br>手順に沿って以下の4つを取得し、最後にツールの設定画面に入力します：<br><br>1. **出品者ID (Seller ID)**<br>2. **LWA Client ID**<br>3. **LWA Client Secret**<br>4. **Refresh Token (リフレッシュトークン)**",
+        image: "output/slide_01.png"
+      },
+      {
+        id: 2,
+        badge: "STEP 1-1",
+        title: "出品者IDの取得: アカウント情報へ",
+        description: "まずはアカウント固有の「出品者ID」を取得します。<br><br>セラーセントラルトップ画面の右上にある **「設定（歯車マーク）」** をクリックし、メニューから **「出品用アカウント情報」** を選択します。",
+        image: "output/slide_02.png"
+      },
+      {
+        id: 3,
+        badge: "STEP 1-2",
+        title: "出品者IDの取得: 出品者情報へ",
+        description: "出品用アカウント情報画面が開きます。<br><br>画面左側の「登録内容」セクションにある **「出品者情報」** リンクをクリックします。",
+        image: "output/slide_03.png"
+      },
+      {
+        id: 4,
+        badge: "STEP 1-3",
+        title: "出品者IDの取得: 出品者トークンへ",
+        description: "出品者情報画面が開きます。<br><br>画面中ほどにある **「出品者トークン」** のリンクをクリックします。",
+        image: "output/slide_04.png"
+      },
+      {
+        id: 5,
+        badge: "STEP 1-4",
+        title: "出品者IDのコピー & 保存",
+        description: "画面に **「あなたの出品者トークン」** が表示されます。これがツールで設定する **「出品者ID (Seller ID)」** です。`A`から始まる英数字をコピーして、右側の「接続キー取得メモ」の「出品者ID」欄に貼り付けて保存してください。<br><br><span class='tip'>💡 マニュアル画像では、この個人情報はダミー値にマスクされています。</span>",
+        image: "output/slide_05.png"
+      },
+      {
+        id: 6,
+        badge: "STEP 2-1",
+        title: "アプリ開発画面を開く",
+        description: "次に、アプリ登録とLWA Client ID/Secretを取得します。<br><br>セラーセントラルの左上メニューから **「アプリとサービス」** ➔ **「アプリの開発」** をクリックします。",
+        image: "output/slide_06.png"
+      },
+      {
+        id: 7,
+        badge: "【補足】",
+        title: "初回のみ：ポータル登録とオンボーディング",
+        description: "「アプリの開発」を初めて開く際、新しいソリューションプロバイダーポータルへの紐付け（オンボーディング）画面が表示されることがあります。<br><br>画面の指示に従い、アカウントを選択し、Eメールの認証を完了させてください。<br><br><span class='tip'>💡 Eメールなどの機密情報はマスクされています。</span>",
+        image: "output/slide_07.png"
+      },
+      {
+        id: 8,
+        badge: "【補足】",
+        title: "オンボーディング：国・アカウント選択",
+        description: "利用するアカウントと言語・国を選択します。<br><br>「エメリーマートオンライン（アメリカ合衆国など該当の国）」を選択し、確定します。<br><br><span class='tip'>💡 アカウント名のID部分はマスクされます。</span>",
+        image: "output/slide_08.png"
+      },
+      {
+        id: 9,
+        badge: "STEP 2-2",
+        title: "ポータル画面とLWA情報の表示",
+        description: "ソリューションプロバイダーポータルのトップ画面が開きます。<br><br>登録されているアプリ（例: `NETSEA-Research-Tool`）の「LWA認証情報」列にある **「表示」** リンクをクリックします。<br><br><span class='tip'>💡 アプリIDやアカウント名はマスクされます。</span>",
+        image: "output/slide_09.png"
+      },
+      {
+        id: 10,
+        badge: "STEP 2-3",
+        title: "LWA Client ID / Secret の取得",
+        description: "「LWA認証情報」のポップアップが表示されます。<br><br>1. **「クライアントID」** をコピーし、右側メモ欄の「LWA Client ID」へ貼り付けます。<br>2. **「クライアント機密情報」** アコーディオンを展開し、表示される **「Client Secret」** をコピーして、右側メモ欄の「LWA Client Secret」へ貼り付けます。<br><br><span class='warning'>⚠️ これらは最も重要な暗号鍵です。絶対に他人に教えないでください。</span>",
+        image: "output/slide_10.png"
+      },
+      {
+        id: 11,
+        badge: "STEP 3-1",
+        title: "リフレッシュトークン：承認メニューを開く",
+        description: "続いて、リフレッシュトークン（ツールがデータ通信を継続するための許可証）を取得します。<br><br>ポータル画面で、アプリの右端にある「アプリの編集」ボタンの右側にある **「&or;」矢印** をクリックし、メニューから **「承認」** を選択します。",
+        image: "output/slide_11.png"
+      },
+      {
+        id: 12,
+        badge: "STEP 3-2",
+        title: "リフレッシュトークン：アプリの認可",
+        description: "「認可の管理」画面に切り替わります。<br><br>マーケットプレイス「日本」の右側にある **「アプリを承認」** ボタンをクリックします。",
+        image: "output/slide_12.png"
+      },
+      {
+        id: 13,
+        badge: "STEP 3-3",
+        title: "リフレッシュトークンのコピー",
+        description: "承認が完了すると、画面に **リフレッシュトークン（Refresh Token）** が発行されます。非常に長い英数字の文字列が表示されるので、**「コピー」** をクリックし、右側メモ欄の「Refresh Token」へ貼り付けます。<br><br><span class='warning'>⚠️ リフレッシュトークンは、この画面を一度閉じると再表示できません。必ずここでコピーしてください！</span>",
+        image: "output/slide_13.png"
+      },
+      {
+        id: 14,
+        badge: "STEP 4",
+        title: "ツール「ResearchDeck」への設定",
+        description: "コピーした4つのキーを、ResearchDeckの設定画面に入力します。右側のメモ欄に保存したキーをそれぞれの項目へコピー＆ペーストしてください。<br><br>すべて入力したら、**「接続テスト」** ボタンを押して「接続成功」となることを確認します。最後に **「保存」** をクリックして完了です！",
+        image: "output/slide_14.png"
+      }
     ];
 
     let currentSlideIndex = 0;
 
-    // DOM要素の取得
-    const slideImage = document.getElementById("slide-image");
-    const slideCounter = document.getElementById("slide-counter");
-    const btnPrev = document.getElementById("btn-prev");
-    const btnNext = document.getElementById("btn-next");
+    // --- DOM要素の参照 ---
+    const stepListContainer = document.getElementById("rd-step-list");
+    const slideImage = document.getElementById("rd-slide-image");
+    const slideBadge = document.getElementById("rd-slide-badge");
+    const slideTitle = document.getElementById("rd-slide-title");
+    const slideDescription = document.getElementById("rd-slide-description");
+    const slideCounter = document.getElementById("rd-slide-counter");
+    
+    const btnPrev = document.getElementById("rd-btn-prev");
+    const btnNext = document.getElementById("rd-btn-next");
+    const btnPrevArrow = document.getElementById("rd-btn-prev-arrow");
+    const btnNextArrow = document.getElementById("rd-btn-next-arrow");
 
-    // スライド切り替え表示関数
-    function renderSlide(index) {
-      const slide = slides[index];
-      slideImage.src = slide.image;
-      
-      // カウンター更新
-      slideCounter.textContent = `${index + 1} / ${slides.length}`;
-      
-      // ボタン有効/無効状態（最初のスライドでは「前へ」を隠す/無効にし、最後のスライドでは「次へ」を隠す/無効にする）
-      btnPrev.style.visibility = index === 0 ? "hidden" : "visible";
-      btnNext.style.visibility = index === slides.length - 1 ? "hidden" : "visible";
+    const zoomTrigger = document.getElementById("rd-zoom-trigger");
+    const zoomModal = document.getElementById("rd-zoom-modal");
+    const zoomImage = document.getElementById("rd-zoom-image");
+    const zoomClose = document.getElementById("rd-zoom-close");
+    const zoomCaption = document.getElementById("rd-zoom-caption");
+    const toast = document.getElementById("rd-toast");
+
+    // --- 1. 左側ナビゲーション（目次）の生成 ---
+    function initializeStepList() {
+      stepListContainer.innerHTML = "";
+      slides.forEach((slide, index) => {
+        const item = document.createElement("div");
+        item.className = "rd-step-item";
+        if (index === currentSlideIndex) item.classList.add("active");
+        
+        item.innerHTML = `
+          <div class="rd-step-num">${slide.badge}</div>
+          <div class="rd-step-label">${slide.title}</div>
+        `;
+        
+        item.addEventListener("click", () => {
+          changeSlide(index);
+        });
+        
+        stepListContainer.appendChild(item);
+      });
     }
 
-    // ナビゲーションイベント
-    btnPrev.addEventListener("click", () => {
-      if (currentSlideIndex > 0) {
-        currentSlideIndex--;
-        renderSlide(currentSlideIndex);
+    // --- 2. スライド描画処理 ---
+    function renderSlide(index) {
+      currentSlideIndex = index;
+      const slide = slides[index];
+
+      // スライドデータ適用
+      slideBadge.textContent = slide.badge;
+      slideTitle.textContent = slide.title;
+      slideDescription.innerHTML = slide.description;
+      slideImage.src = slide.image;
+      slideImage.alt = slide.title;
+
+      // 下部カウンター
+      slideCounter.textContent = `${index + 1} / ${slides.length}`;
+
+      // 左側ナビゲーションのactive切り替え
+      const items = stepListContainer.querySelectorAll(".rd-step-item");
+      items.forEach((item, idx) => {
+        if (idx === index) {
+          item.classList.add("active");
+          // アクティブな要素がサイドバーで見えるようにスクロール
+          item.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } else {
+          item.classList.remove("active");
+        }
+      });
+
+      // ボタンの有効・無効切り替え（最初と最後で非表示）
+      btnPrev.disabled = index === 0;
+      btnPrevArrow.style.visibility = index === 0 ? "hidden" : "visible";
+      
+      btnNext.disabled = index === slides.length - 1;
+      btnNextArrow.style.visibility = index === slides.length - 1 ? "hidden" : "visible";
+      
+      // 最終スライドのテキスト変更
+      if (index === slides.length - 1) {
+        btnNext.textContent = "完了！";
+      } else {
+        btnNext.textContent = "次のステップ ▶";
       }
+    }
+
+    // スライド変更時の統合ラッパー
+    function changeSlide(index) {
+      if (index >= 0 && index < slides.length) {
+        renderSlide(index);
+        // URLパラメータの更新 (ブラウザ履歴には残さない)
+        const url = new URL(window.location);
+        url.searchParams.set('slide', index + 1);
+        window.history.replaceState({}, '', url);
+      }
+    }
+
+    // --- 3. ナビゲーションイベントの登録 ---
+    btnPrev.addEventListener("click", () => {
+      if (currentSlideIndex > 0) changeSlide(currentSlideIndex - 1);
+    });
+    btnPrevArrow.addEventListener("click", () => {
+      if (currentSlideIndex > 0) changeSlide(currentSlideIndex - 1);
     });
 
     btnNext.addEventListener("click", () => {
       if (currentSlideIndex < slides.length - 1) {
-        currentSlideIndex++;
-        renderSlide(currentSlideIndex);
+        changeSlide(currentSlideIndex + 1);
+      } else {
+        showToast("マニュアルをすべて確認しました。設定を行ってください！");
       }
+    });
+    btnNextArrow.addEventListener("click", () => {
+      if (currentSlideIndex < slides.length - 1) changeSlide(currentSlideIndex + 1);
     });
 
     // キーボード操作のサポート
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft" || e.key === "Left") {
-        if (currentSlideIndex > 0) btnPrev.click();
+        if (currentSlideIndex > 0) changeSlide(currentSlideIndex - 1);
       } else if (e.key === "ArrowRight" || e.key === "Right") {
-        if (currentSlideIndex < slides.length - 1) btnNext.click();
+        if (currentSlideIndex < slides.length - 1) changeSlide(currentSlideIndex + 1);
+      } else if (e.key === "Escape") {
+        closeZoom();
       }
     });
 
-    // URLパラメータからスライド番号 (1-indexed) を取得して初期表示スライドを決定
+    // --- 4. 画像ズーム機能の登録 ---
+    zoomTrigger.addEventListener("click", () => {
+      const slide = slides[currentSlideIndex];
+      zoomImage.src = slide.image;
+      zoomCaption.textContent = slide.title;
+      zoomModal.hidden = false;
+    });
+
+    function closeZoom() {
+      zoomModal.hidden = true;
+    }
+    zoomClose.addEventListener("click", closeZoom);
+    zoomModal.addEventListener("click", (e) => {
+      if (e.target === zoomModal) closeZoom();
+    });
+
+    // --- 5. 接続キーメモ帳機能（ローカルストレージ連動） ---
+    const memoFields = ["seller-id", "client-id", "client-secret", "refresh-token"];
+    
+    function loadMemos() {
+      memoFields.forEach(field => {
+        const input = document.getElementById(`memo-${field}`);
+        const savedVal = localStorage.getItem(`rd-memo-${field}`);
+        if (savedVal && input) {
+          input.value = savedVal;
+        }
+        
+        // 保存リスナー
+        input.addEventListener("input", (e) => {
+          localStorage.setItem(`rd-memo-${field}`, e.target.value);
+        });
+      });
+    }
+
+    // クリアボタン
+    document.getElementById("rd-clear-notes-btn").addEventListener("click", () => {
+      if (confirm("メモに入力したキーをすべてクリアしますか？")) {
+        memoFields.forEach(field => {
+          const input = document.getElementById(`memo-${field}`);
+          if (input) input.value = "";
+          localStorage.removeItem(`rd-memo-${field}`);
+        });
+        showToast("クリアしました");
+      }
+    });
+
+    // --- 6. トースト通知表示用 ---
+    function showToast(message) {
+      toast.textContent = message;
+      toast.hidden = false;
+      toast.classList.add("show");
+      
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => { toast.hidden = true; }, 300);
+      }, 2500);
+    }
+
+    // --- 7. 初期化 ---
+    // URLから初期スライド判定
     const urlParams = new URLSearchParams(window.location.search);
     const slideParam = urlParams.get('slide');
     if (slideParam) {
@@ -101,8 +391,10 @@
         currentSlideIndex = slideNum - 1;
       }
     }
-    // 初期化
+
+    initializeStepList();
     renderSlide(currentSlideIndex);
+    loadMemos();
   </script>
 </body>
 </html>
