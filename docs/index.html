@@ -17,7 +17,7 @@
       <h1>ResearchDeck 接続設定マニュアル</h1>
       <p class="subtitle">Amazon SP-API 接続キー取得手順</p>
       <div class="header-desc">
-        <p>本マニュアルは、リサーチツール「ResearchDeck」をAmazonのデータ（SP-API）と連携させ、動作させるために必要な **4つの認証キー** を安全に取得するための手順書です。</p>
+        <p>本マニュアルは、リサーチツール「ResearchDeck」をAmazonのデータ（SP-API）と連携させ、動作させるために必要な <strong>4つの認証キー</strong> を安全に取得するための手順書です。</p>
         <div class="keys-summary">
           <span>1. 出品者ID (Seller ID)</span>
           <span>2. LWA Client ID</span>
@@ -38,10 +38,10 @@
           <div class="step-instruction">
             <p>Amazonセラーアカウント固有の識別情報である「出品者トークン（Seller ID）」を取得します。</p>
             <ol>
-              <li>Amazonセラーセントラルにログインし、画面右上にある **「設定（歯車マーク）」** をクリックして **「出品用アカウント情報」** を開きます。</li>
-              <li>画面左側の「登録内容」セクション内にある **「出品者情報」** リンクをクリックします。</li>
-              <li>画面中ほどにある **「出品者トークン」** のリンクをクリックします。</li>
-              <li><span class="step-marker">①</span>画面に表示される `A` から始まる英数字の文字列（出品者トークン）の右にある **「コピー」** ボタンをクリックして保存します。</li>
+              <li>Amazonセラーセントラルにログインし、画面右上にある <strong>「設定（歯車マーク）」</strong> をクリックして <strong>「出品用アカウント情報」</strong> を開きます。</li>
+              <li>画面左側の「登録内容」セクション内にある <strong>「出品者情報」</strong> リンクをクリックします。</li>
+              <li>画面中ほどにある <strong>「出品者トークン」</strong> のリンクをクリックします。</li>
+              <li><span class="step-marker">①</span>画面に表示される <code>A</code> から始まる英数字の文字列（出品者トークン）の右にある <strong>「コピー」</strong> ボタンをクリックして保存します。</li>
             </ol>
           </div>
           <div class="step-image-container">
@@ -61,14 +61,31 @@
       <!-- STEP 2 -->
       <section class="step-section">
         <div class="step-num-badge">STEP 2</div>
-        <h2>アプリ開発画面の表示</h2>
+        <h2>アプリ開発者登録と画面の表示</h2>
         <div class="step-card">
           <div class="step-instruction">
-            <p>APIの接続許可を設定するため、セラーセントラルのアプリ開発者ポータルを開きます。</p>
+            <p>APIの接続許可を設定するため、まずはAmazonセラーアカウントを「開発者」として登録し、アプリ開発者ポータルを開きます。</p>
             <ol>
-              <li><span class="step-marker">①</span>セラーセントラルの左上メニュー（三本線マーク）から、**「アプリとサービス」** ➔ **「アプリの開発」** をクリックします。</li>
-              <li>初めてこの画面を開く場合、ソリューションプロバイダーポータルへの紐付け（オンボーディング）画面が表示されることがあります。</li>
-              <li>画面指示に従い、お使いのアカウントと言語・国（日本など）を選択し、メール認証等の手続きを完了させてポータルのトップ画面へ進んでください。</li>
+              <li><span class="step-marker">①</span>セラーセントラルの左上メニュー（三本線マーク）から、<strong>「アプリとサービス」</strong> ➔ <strong>「アプリの開発」</strong> をクリックします。</li>
+              <li>
+                <strong>【重要：初めて開く場合（開発者未登録の方）】</strong><br>
+                画面に「開発者登録（開発者プロファイル作成）」画面が表示されます。画面指示に従って必要情報を入力し、申請を進めてください：
+                <ul style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; list-style-type: none;">
+                  <li>✔ <strong>開発者情報の入力</strong>: 担当者名、連絡用メールアドレス、電話番号等を入力します。</li>
+                  <li>✔ <strong>開発目的の選択</strong>: 「自社で利用するプライベートアプリの開発（非公開）」を選択します。</li>
+                  <li>✔ <strong>データアクセスについて</strong>: リサーチツールの動作に個人情報のアクセスは不要なため、一般的な「出品商品情報（Product Listing）」等のアクセスのみを選択すれば問題ありません。</li>
+                </ul>
+              </li>
+              <li>
+                <strong>【申請の送信と審査】</strong><br>
+                プロファイルを入力して送信すると、Amazonによる審査が開始されます。
+                <div class="alert-box alert-warning" style="margin-top: 10px;">
+                  <strong>💡 審査の目安</strong>: 通常は即時、または数時間〜数日程度で自動的に承認されます。承認されるまでSTEP 3以降の「LWAキーの表示」や「アプリの認可」は行えませんので、結果をお待ちください。
+                </div>
+              </li>
+              <li>
+                登録・審査が完了すると、メニューから再度「アプリの開発」を開いた際に、アプリ管理ポータルのトップ画面が表示されるようになります。
+              </li>
             </ol>
           </div>
           <div class="step-image-container">
@@ -90,11 +107,15 @@
         <h2>LWA Client ID / Secret の取得</h2>
         <div class="step-card">
           <div class="step-instruction">
-            <p>ツールがAPIにアクセスするための「鍵」となる2つの認証情報を取得します。</p>
+            <p>開発者プロファイルの審査が完了すると、ツールがAPIにアクセスするための「鍵（認証情報）」を取得できるようになります。</p>
+            <div class="alert-box alert-success" style="background-color: rgba(52, 199, 89, 0.1); border-left: 4px solid var(--color-success); color: #a3f7b5; margin-bottom: 20px; font-size: 13px; border-radius: var(--radius-md); padding: 16px;">
+              <strong>💡 開発者プロファイルの審査完了マーク</strong><br>
+              STEP 3の画像の上部に表示されている <strong>「開発者プロファイルが審査されました」</strong>（緑色のアラート）が、Amazonによる申請承認が完了した目印です。この表示が出ていることを確認してください。
+            </div>
             <ol>
-              <li>ポータルトップ画面に登録されている開発中のアプリ（例: `NETSEA-Research-Tool` など）の「LWA認証情報」列にある **「表示」** リンクをクリックします。</li>
-              <li><span class="step-marker">①</span>ポップアップ画面に表示された **「クライアントID」**（`amzn1.application-oa2-client.〜`）をコピーして保存します。</li>
-              <li><span class="step-marker">②</span>次に、**「クライアント機密情報（Client Secret）」** のアコーディオンを展開し、表示されるキーをコピーして保存します。</li>
+              <li>ポータルトップ画面に登録されている開発中のアプリ（例: <code>NETSEA-Research-Tool</code> など）の「LWA認証情報」列にある <strong>「表示」</strong> リンクをクリックします。</li>
+              <li><span class="step-marker">①</span>ポップアップ画面に表示された <strong>「クライアントID」</strong>（<code>amzn1.application-oa2-client.〜</code>）をコピーして保存します。</li>
+              <li><span class="step-marker">②</span>次に、<strong>「クライアント機密情報（Client Secret）」</strong> のアコーディオンを展開し、表示されるキーをコピーして保存します。</li>
             </ol>
             <div class="alert-box alert-danger">
               <strong>⚠️ 注意</strong>: これらはあなたのアカウントを制御できる最も重要な暗号鍵です。絶対に第三者に渡したり公開したりしないでください。
@@ -124,9 +145,9 @@
           <div class="step-instruction">
             <p>ツールがAmazon APIとの通信を永続的に行うための認証トークンを取得します。</p>
             <ol>
-              <li>ポータル画面で、対象アプリの右端にある「アプリの編集」ボタンの右隣にある **「∨」矢印マーク** をクリックし、メニューから **「承認」** を選択します。</li>
-              <li>「認可の管理」画面に切り替わったら、マーケットプレイス「日本」の右側にある **「アプリを承認」** ボタンをクリックします。</li>
-              <li><span class="step-marker">①</span>承認完了後、画面に表示される **リフレッシュトークン (Refresh Token)** の右側にある **「コピー」** ボタンをクリックして保存します。</li>
+              <li>ポータル画面で、対象アプリの右端にある「アプリの編集」ボタンの右隣にある <strong>「∨」矢印マーク</strong> をクリックし、メニューから <strong>「承認」</strong> を選択します。</li>
+              <li>「認可の管理」画面に切り替わったら、マーケットプレイス「日本」の右側にある <strong>「アプリを承認」</strong> ボタンをクリックします。</li>
+              <li><span class="step-marker">①</span>承認完了後、画面に表示される <strong>リフレッシュトークン (Refresh Token)</strong> の右側にある <strong>「コピー」</strong> ボタンをクリックして保存します。</li>
             </ol>
             <div class="alert-box alert-warning">
               <strong>⚠️ 注意</strong>: リフレッシュトークンはこの画面を閉じると二度と再表示できません。必ずここでコピーを保存したことを確認してから画面を閉じてください。
@@ -154,18 +175,18 @@
           <div class="step-instruction">
             <p>最後に、取得した4つのキーをツールの設定画面に適用します。</p>
             <ol>
-              <li>Chromeブラウザのツールバーにある **ResearchDeckのアイコン** をクリックし、設定（オプション）画面を開きます。</li>
+              <li>Chromeブラウザのツールバーにある <strong>ResearchDeckのアイコン</strong> をクリックし、設定（オプション）画面を開きます。</li>
               <li>
                 先ほど保存した4つの情報をそれぞれ対応する欄に入力します：
                 <ul style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; list-style-type: none;">
-                  <li><span class="step-marker">①</span>**LWA Client ID**</li>
-                  <li><span class="step-marker">②</span>**LWA Client Secret**</li>
-                  <li><span class="step-marker">③</span>**Refresh Token**</li>
-                  <li><span class="step-marker">④</span>**出品者ID (Seller ID)**</li>
+                  <li><span class="step-marker">①</span><strong>LWA Client ID</strong></li>
+                  <li><span class="step-marker">②</span><strong>LWA Client Secret</strong></li>
+                  <li><span class="step-marker">③</span><strong>Refresh Token</strong></li>
+                  <li><span class="step-marker">④</span><strong>出品者ID (Seller ID)</strong></li>
                 </ul>
               </li>
-              <li><span class="step-marker">⑤</span>入力後、**「接続テスト」** ボタンをクリックし、画面に **「接続成功」** と表示されることを確認します。</li>
-              <li><span class="step-marker">⑥</span>最後に、**「保存する」** ボタンをクリックすれば、すべてのセットアップが完了です！</li>
+              <li><span class="step-marker">⑤</span>入力後、<strong>「接続テスト」</strong> ボタンをクリックし、画面に <strong>「接続成功」</strong> と表示されることを確認します。</li>
+              <li><span class="step-marker">⑥</span>最後に、<strong>「保存する」</strong> ボタンをクリックすれば、すべてのセットアップが完了です！</li>
             </ol>
           </div>
           <div class="step-image-container">
