@@ -36,7 +36,7 @@
 
 詳細な取得手順は、ステップ・バイ・ステップで確認できる以下のWeb版スライドマニュアルをご覧ください。
 
-*   📖 **[Web版接続キー取得マニュアルを開く](https://sugata38.github.io/research-deck/)**
+*   📖 **[Web版接続キー取得マニュアルを開く](https://sugata38.github.io/research-deck/docs/)**
     *(※GitHub Pagesによる公開設定完了後、上記のURLからアクセスできるようになります。)*
 
 <details>
