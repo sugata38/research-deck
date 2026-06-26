@@ -107,6 +107,14 @@
   color: #2c2c2c;
 }
 
+.rd-icon-btn:disabled,
+.rd-icon-btn.rd-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background-color: transparent;
+  pointer-events: none;
+}
+
 .rd-logo {
   display: flex;
   align-items: center;

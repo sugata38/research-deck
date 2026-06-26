@@ -884,28 +884,41 @@ function renderDashboard(rakutenData, amazonData) {
   const refreshBtn = document.getElementById("rd-refresh-btn");
   if (refreshBtn) {
     refreshBtn.addEventListener("click", async () => {
-      const newRakutenData = extractRakutenData();
-      const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
-      newRakutenData.extraPointRate = savedExtraRate;
-      const pageTitle = document.title || "";
-      const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
-      const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-      const discountedPrice = Math.max(0, newRakutenData.price - newRakutenData.coupon);
-      newRakutenData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
-      
-      // クーポン値引き後の基本ポイントを再計算
-      const discountedPoints = newRakutenData.price > 0 
-        ? Math.floor(newRakutenData.rawPoints * (discountedPrice / newRakutenData.price)) 
-        : 0;
-      newRakutenData.points = discountedPoints;
+      // ボタンを一時的に無効化して連打を防ぐ
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add("rd-disabled");
 
-      const extraPoints = Math.floor(newRakutenData.taxExcludedPrice * (savedExtraRate / 100));
-      newRakutenData.extraPoints = Math.abs(extraPoints);
-      newRakutenData.netCost = newRakutenData.price - discountedPoints - Math.abs(extraPoints) - newRakutenData.coupon;
-      if (newRakutenData.janCode) {
-        await fetchAndRenderAmazonData(newRakutenData);
-      } else {
-        renderDashboard(newRakutenData, null);
+      try {
+        const newRakutenData = extractRakutenData();
+        const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
+        newRakutenData.extraPointRate = savedExtraRate;
+        const pageTitle = document.title || "";
+        const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
+        const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
+        const discountedPrice = Math.max(0, newRakutenData.price - newRakutenData.coupon);
+        newRakutenData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
+        
+        // クーポン値引き後の基本ポイントを再計算
+        const discountedPoints = newRakutenData.price > 0 
+          ? Math.floor(newRakutenData.rawPoints * (discountedPrice / newRakutenData.price)) 
+          : 0;
+        newRakutenData.points = discountedPoints;
+
+        const extraPoints = Math.floor(newRakutenData.taxExcludedPrice * (savedExtraRate / 100));
+        newRakutenData.extraPoints = Math.abs(extraPoints);
+        newRakutenData.netCost = newRakutenData.price - discountedPoints - Math.abs(extraPoints) - newRakutenData.coupon;
+        
+        if (newRakutenData.janCode) {
+          await fetchAndRenderAmazonData(newRakutenData);
+        } else {
+          renderDashboard(newRakutenData, null);
+        }
+      } catch (err) {
+        console.error("ResearchDeck: リフレッシュ中にエラーが発生しました -", err);
+      } finally {
+        // 処理完了後に有効化に戻す
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove("rd-disabled");
       }
     });
   }
