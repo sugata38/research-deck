@@ -1,40 +1,31 @@
 /* ==========================================================================
-   ResearchDeck Setup Manual Style Sheets
-   Vanilla CSS with Dark/Glassmorphism Design System
+   ResearchDeck Clean Document Style
+   Minimal & Modern Dark Design for Quick Reading
    ========================================================================== */
 
-/* --- 1. デザインシステム変数 ＆ 基本設定 --- */
 :root {
   --font-main: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
-  /* カラーパレット (洗練された深みのあるダークネイビーベース) */
-  --bg-primary: #0a0f1d;
-  --bg-secondary: #121829;
-  --bg-tertiary: #1b233d;
-  --bg-card: rgba(22, 30, 54, 0.7);
+  /* 深みのあるダークブルーグレー（目に優しく、読みやすいコントラスト） */
+  --bg-main: #0c101d;
+  --bg-card: rgba(20, 27, 47, 0.7);
   --border-color: rgba(255, 255, 255, 0.08);
   
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
-  --text-dark: #111827;
   
-  /* アクセントカラー */
-  --color-primary: #0071e3;       /* Apple風鮮やかブルー */
-  --color-primary-hover: #1485ff;
-  --color-success: #34c759;       /* グリーン */
-  --color-success-bg: rgba(52, 199, 89, 0.1);
-  --color-warning: #ff9f0a;       /* オレンジ */
+  /* アクセント */
+  --color-primary: #0071e3;
+  --color-success: #34c759;
+  --color-warning: #ff9f0a;
   --color-warning-bg: rgba(255, 159, 10, 0.1);
-  --color-danger: #ff453a;        /* レッド */
+  --color-danger: #ff453a;
   --color-danger-bg: rgba(255, 69, 58, 0.1);
   
-  /* 効果・シャドウ */
-  --blur-glass: blur(12px);
-  --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(255, 255, 255, 0.05);
-  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   --radius-lg: 16px;
   --radius-md: 10px;
   --radius-sm: 6px;
+  --shadow-premium: 0 12px 30px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(255, 255, 255, 0.05);
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -44,287 +35,121 @@
   padding: 0;
 }
 
-html {
-  scroll-behavior: smooth;
-  background-color: var(--bg-primary);
+body {
+  background-color: var(--bg-main);
   color: var(--text-main);
   font-family: var(--font-main);
-  line-height: 1.6;
+  line-height: 1.7;
+  padding: 60px 20px;
 }
 
-body {
-  min-height: 100vh;
-  overflow-x: hidden;
+/* 1カラム・メインコンテナ */
+#manual-container {
+  max-width: 780px;
+  margin: 0 auto;
 }
 
-/* --- 2. 3カラムレイアウト構成 --- */
-#app-container {
-  display: grid;
-  grid-template-columns: 280px 1fr 340px;
-  min-height: 100vh;
+/* --- ヘッダー部 --- */
+.manual-header {
+  text-align: center;
+  margin-bottom: 60px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 40px;
 }
 
-/* --- 3. 左サイドバー (ナビゲーション) --- */
-.sidebar-nav {
-  background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  padding: 24px 16px;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.brand-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-}
-
-.brand-icon {
-  font-size: 24px;
+.brand-logo {
+  font-size: 36px;
   color: var(--color-primary);
   background: linear-gradient(135deg, var(--color-primary), #5fc6ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: pulse 3s infinite alternate;
+  margin-bottom: 16px;
+  display: inline-block;
 }
 
-.brand-title h2 {
-  font-size: 18px;
+.manual-header h1 {
+  font-size: 32px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
 }
 
-.brand-title p {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* 進捗パネル */
-.progress-panel {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: var(--shadow-inset);
-}
-
-.progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.progress-label {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.progress-percent {
+.subtitle {
   font-size: 16px;
-  font-weight: 700;
-  color: var(--color-success);
-}
-
-.progress-bar-bg {
-  height: 8px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-success), #85e89d);
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-
-.progress-hint {
-  font-size: 10px;
   color: var(--text-muted);
-  text-align: center;
-}
-
-/* ステップ目次 */
-.step-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.step-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 14px;
   font-weight: 500;
-  transition: var(--transition-smooth);
-  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 24px;
 }
 
-.step-menu-item:hover {
-  color: var(--text-main);
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-.step-menu-item.active {
-  color: var(--text-main);
-  background: rgba(0, 113, 227, 0.15);
-  border-color: rgba(0, 113, 227, 0.3);
-}
-
-.menu-num {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  transition: var(--transition-smooth);
-}
-
-.step-menu-item.active .menu-num {
-  background-color: var(--color-primary);
-  color: #fff;
-  box-shadow: 0 0 10px rgba(0, 113, 227, 0.5);
-}
-
-/* --- 4. 中央メインコンテンツ --- */
-.content-body {
-  padding: 40px 5%;
-  overflow-y: auto;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.content-header {
-  margin-bottom: 48px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 24px;
-}
-
-.content-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, #ffffff, #b2c5e5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.content-header p {
+.header-desc {
   font-size: 15px;
   color: var(--text-muted);
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* ステップセクション */
-.manual-step {
-  margin-bottom: 64px;
-  padding-top: 16px;
-  scroll-margin-top: 40px; /* スクロール時の余白 */
-  transition: var(--transition-smooth);
+.keys-summary {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 10px 20px;
+  border-radius: 50px;
+  border: 1px solid var(--border-color);
+  margin-top: 12px;
 }
 
-.manual-step.completed {
+.keys-summary span {
+  color: var(--text-main);
   opacity: 0.85;
 }
 
-.step-badge-container {
+/* --- 各ステップセクション --- */
+.manual-steps {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 60px;
 }
 
-.step-badge {
+.step-section {
+  position: relative;
+}
+
+.step-num-badge {
+  display: inline-block;
   background-color: var(--color-primary);
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: var(--radius-sm);
+  margin-bottom: 12px;
   letter-spacing: 0.5px;
 }
 
-.check-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-  transition: var(--transition-smooth);
-}
-
-.check-container:hover {
-  color: var(--text-main);
-}
-
-.check-container input {
-  display: none;
-}
-
-.checkmark {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-color);
-  border-radius: 4px;
-  display: inline-block;
-  position: relative;
-  transition: var(--transition-smooth);
-}
-
-.check-container input:checked + .checkmark {
-  background-color: var(--color-success);
-  border-color: var(--color-success);
-}
-
-.check-container input:checked + .checkmark::after {
-  content: '✓';
-  color: #fff;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.manual-step h2 {
+.step-section h2 {
   font-size: 22px;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
-/* ステップカード */
 .step-card {
   background: var(--bg-card);
-  backdrop-filter: var(--blur-glass);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 32px;
   box-shadow: var(--shadow-premium);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
 }
 
 .step-instruction p {
@@ -343,6 +168,10 @@ body {
 .step-instruction ol li::marker {
   font-weight: 700;
   color: var(--color-primary);
+}
+
+.step-instruction ol li strong {
+  color: #fff;
 }
 
 /* アラートボックス */
@@ -366,15 +195,13 @@ body {
   color: #ffd085;
 }
 
-/* 画像コンテナ */
+/* 画像表示枠 */
 .step-image-container {
-  position: relative;
   width: 100%;
-  min-height: 200px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px dashed var(--border-color);
-  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.01);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -383,28 +210,28 @@ body {
 .step-image {
   width: 100%;
   height: auto;
-  object-fit: contain;
+  display: block;
   cursor: zoom-in;
-  transition: transform 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .step-image:hover {
-  transform: scale(1.02);
+  opacity: 0.9;
 }
 
 /* 画像プレースホルダー */
 .image-placeholder {
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 40px;
+  padding: 40px 20px;
   text-align: center;
   color: var(--text-muted);
   width: 100%;
-  height: 100%;
-  min-height: 250px;
+  min-height: 260px;
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 .placeholder-icon {
@@ -416,129 +243,24 @@ body {
   font-size: 13px;
   font-family: monospace;
   background-color: rgba(255, 255, 255, 0.04);
-  padding: 6px 12px;
+  padding: 8px 16px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
+  max-width: 90%;
+  word-break: break-all;
 }
 
-/* --- 5. 右サイドバー (キーメモ帳) --- */
-.sidebar-notes {
-  background-color: var(--bg-secondary);
-  border-left: 1px solid var(--border-color);
-  padding: 24px 20px;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.notes-header h3 {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.notes-header p {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-.notes-body {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex-grow: 1;
-}
-
-.note-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.note-label-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.note-item label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.btn-copy {
-  background-color: rgba(0, 113, 227, 0.1);
-  color: var(--color-primary-hover);
-  border: 1px solid rgba(0, 113, 227, 0.2);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.btn-copy:hover {
-  background-color: var(--color-primary);
-  color: #fff;
-}
-
-.note-item input,
-.note-item textarea {
-  width: 100%;
-  background-color: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-main);
-  padding: 10px 12px;
-  font-family: monospace;
-  font-size: 13px;
-  transition: var(--transition-smooth);
-}
-
-.note-item input:focus,
-.note-item textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
-  background-color: rgba(0, 0, 0, 0.35);
-}
-
-.note-item textarea {
-  height: 80px;
-  resize: none;
-}
-
-.notes-footer {
-  padding-top: 16px;
+/* --- フッター --- */
+.manual-footer {
+  text-align: center;
+  margin-top: 80px;
+  padding-top: 30px;
   border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
-.btn-clear {
-  width: 100%;
-  background-color: transparent;
-  color: #ff453a;
-  border: 1px dashed rgba(255, 69, 58, 0.4);
-  padding: 10px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.btn-clear:hover {
-  background-color: rgba(255, 69, 58, 0.1);
-  border-style: solid;
-}
-
-/* --- 6. モーダル ＆ トースト (インタラクティブ要素) --- */
-/* 画像拡大モーダル */
+/* --- 画像拡大モーダル --- */
 .zoom-modal {
   position: fixed;
   z-index: 1000;
@@ -546,27 +268,27 @@ body {
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(6, 10, 20, 0.95);
+  background-color: rgba(6, 10, 20, 0.96);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .zoom-modal.show {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
 }
 
 .zoom-content {
-  max-width: 90%;
-  max-height: 80%;
+  max-width: 92%;
+  max-height: 82%;
   border-radius: var(--radius-md);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-  transform: scale(0.95);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  transform: scale(0.96);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -596,127 +318,21 @@ body {
   font-size: 14px;
 }
 
-/* トースト通知 */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background-color: var(--color-primary);
-  color: #fff;
-  padding: 12px 24px;
-  border-radius: 50px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 10px 25px rgba(0, 113, 227, 0.4);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 1100;
-  pointer-events: none;
-}
-
-.toast.show {
-  transform: translateX(-50%) translateY(0);
-}
-
-/* --- 7. レスポンシブ対応 (レスポンシブデザイン) --- */
-
-/* 1200px以下：目次を折りたたみ、または2カラム構成へ */
-@media (max-width: 1200px) {
-  #app-container {
-    grid-template-columns: 240px 1fr 280px;
-  }
-}
-
-/* 992px以下：3カラムから2カラムに変更 (左サイドバーを結合または非表示) */
-@media (max-width: 992px) {
-  #app-container {
-    grid-template-columns: 1fr 280px;
+/* --- レスポンシブ --- */
+@media (max-width: 600px) {
+  body {
+    padding: 30px 16px;
   }
   
-  /* 左サイドバーを非表示にする */
-  .sidebar-nav {
-    display: none;
+  .manual-header h1 {
+    font-size: 24px;
   }
-}
-
-/* 768px以下：1カラム（スマホ縦画面対応） */
-@media (max-width: 768px) {
-  #app-container {
-    grid-template-columns: 1fr;
-    display: flex;
-    flex-direction: column;
+  
+  .step-card {
+    padding: 20px;
   }
-
-  .content-body {
-    padding: 24px 16px 100px 16px; /* 下部にメモ帳ボタン用の余白 */
-  }
-
-  /* メモ帳を画面下部にアコーディオンまたはドロワー化 */
-  .sidebar-notes {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    max-height: 70vh;
-    border-left: none;
-    border-top: 1px solid var(--border-color);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
-    z-index: 900;
-    transform: translateY(calc(100% - 50px)); /* ヘッダーだけ見せて引っ張る動作 */
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-  }
-
-  .sidebar-notes.expanded {
-    transform: translateY(0);
-  }
-
-  .notes-header {
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 8px;
-  }
-
-  .notes-header::after {
-    content: '▲';
-    font-size: 10px;
-    color: var(--color-primary);
-    transition: transform 0.3s;
-  }
-
-  .sidebar-notes.expanded .notes-header::after {
-    transform: rotate(180deg);
-  }
-
-  .notes-body {
-    display: none;
-    padding-top: 16px;
-  }
-
-  .sidebar-notes.expanded .notes-body {
-    display: flex;
-  }
-
-  .notes-footer {
-    display: none;
-  }
-
-  .sidebar-notes.expanded .notes-footer {
-    display: block;
-  }
-}
-
-/* --- 8. Keyframes アニメーション --- */
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.05);
-    opacity: 1;
+  
+  .step-section h2 {
+    font-size: 18px;
   }
 }
