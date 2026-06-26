@@ -1,565 +1,722 @@
-/* ============================================================
-   ResearchDeck Manual - Modern Glassmorphism Styling
-   ============================================================ */
+/* ==========================================================================
+   ResearchDeck Setup Manual Style Sheets
+   Vanilla CSS with Dark/Glassmorphism Design System
+   ========================================================================== */
 
-/* --- デザイン変数 --- */
+/* --- 1. デザインシステム変数 ＆ 基本設定 --- */
 :root {
-  --bg-main: #05070f;
-  --bg-sidebar: #0b0e17;
-  --border-color: rgba(255, 255, 255, 0.06);
-  --primary-color: #45f3ff;
-  --primary-hover: #3bd1dd;
-  --text-main: #c5c6c7;
-  --text-muted: #8892b0;
-  --text-white: #ffffff;
-  --accent-color: #6f42c1;
-  --accent-gradient: linear-gradient(135deg, #6f42c1 0%, #007bff 100%);
-  --danger-color: #ff3366;
-  --panel-bg: rgba(31, 40, 51, 0.35);
-  --glass-effect: blur(16px);
+  --font-main: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  
+  /* カラーパレット (洗練された深みのあるダークネイビーベース) */
+  --bg-primary: #0a0f1d;
+  --bg-secondary: #121829;
+  --bg-tertiary: #1b233d;
+  --bg-card: rgba(22, 30, 54, 0.7);
+  --border-color: rgba(255, 255, 255, 0.08);
+  
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-dark: #111827;
+  
+  /* アクセントカラー */
+  --color-primary: #0071e3;       /* Apple風鮮やかブルー */
+  --color-primary-hover: #1485ff;
+  --color-success: #34c759;       /* グリーン */
+  --color-success-bg: rgba(52, 199, 89, 0.1);
+  --color-warning: #ff9f0a;       /* オレンジ */
+  --color-warning-bg: rgba(255, 159, 10, 0.1);
+  --color-danger: #ff453a;        /* レッド */
+  --color-danger-bg: rgba(255, 69, 58, 0.1);
+  
+  /* 効果・シャドウ */
+  --blur-glass: blur(12px);
+  --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(255, 255, 255, 0.05);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- リセット & 基本設定 --- */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
-  font-family: 'Inter', 'Noto Sans JP', sans-serif;
-  background-color: var(--bg-main);
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-primary);
   color: var(--text-main);
-  overflow: hidden;
-  height: 100vh;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* --- メインレイアウト --- */
-#rd-manual-app {
-  display: flex;
-  width: 100vw;
-  height: 100vh;
-  background-color: var(--bg-main);
-}
-
-/* --- 1. 左側サイドバー（目次） --- */
-.rd-sidebar {
-  width: 340px;
-  min-width: 300px;
-  height: 100%;
-  background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  z-index: 20;
-}
-
-.rd-sidebar-header {
-  padding: 30px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.rd-logo-icon {
-  font-size: 28px;
-  color: var(--primary-color);
-  margin-right: 8px;
-  display: inline-block;
-  text-shadow: 0 0 10px rgba(69, 243, 255, 0.4);
-}
-
-.rd-sidebar-header h2 {
-  font-size: 22px;
-  color: var(--text-white);
-  font-weight: 700;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.rd-sidebar-header p {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 5px;
-}
-
-.rd-step-list {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 20px 15px;
-}
-
-/* 目次アイテム */
-.rd-step-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 14px 18px;
-  margin-bottom: 8px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-}
-
-.rd-step-item:hover {
-  background-color: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-.rd-step-item.active {
-  background-color: rgba(69, 243, 255, 0.08);
-  border-color: rgba(69, 243, 255, 0.2);
-}
-
-.rd-step-num {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 4px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-}
-
-.rd-step-item.active .rd-step-num {
-  background-color: var(--primary-color);
-  color: var(--bg-main);
-}
-
-.rd-step-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rd-step-item.active .rd-step-label {
-  color: var(--text-white);
-  font-weight: 600;
-}
-
-/* --- 2. 中央メインコンテンツエリア --- */
-.rd-main-content {
-  flex-grow: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 30px;
-  background-color: var(--bg-main);
-  overflow-y: auto;
-}
-
-/* 手順テキストパネル */
-.rd-step-text-panel {
-  background: var(--panel-bg);
-  backdrop-filter: var(--glass-effect);
-  -webkit-backdrop-filter: var(--glass-effect);
-  border: 1px solid var(--border-color);
-  padding: 24px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-}
-
-.rd-badge {
-  display: inline-block;
-  background: var(--accent-gradient);
-  color: var(--text-white);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 50px;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
-}
-
-.rd-step-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-white);
-  margin-bottom: 14px;
-  letter-spacing: -0.5px;
-}
-
-.rd-step-description {
-  font-size: 15px;
+  font-family: var(--font-main);
   line-height: 1.6;
-  color: #a8b2c1;
 }
 
-.rd-step-description strong {
-  color: var(--text-white);
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-.rd-step-description .tip {
-  display: block;
-  margin-top: 15px;
-  background: rgba(69, 243, 255, 0.05);
-  border-left: 3px solid var(--primary-color);
-  padding: 10px 14px;
-  border-radius: 0 6px 6px 0;
-  font-size: 13px;
-  color: #92e7ee;
+/* --- 2. 3カラムレイアウト構成 --- */
+#app-container {
+  display: grid;
+  grid-template-columns: 280px 1fr 340px;
+  min-height: 100vh;
 }
 
-.rd-step-description .warning {
-  display: block;
-  margin-top: 15px;
-  background: rgba(255, 51, 102, 0.05);
-  border-left: 3px solid var(--danger-color);
-  padding: 10px 14px;
-  border-radius: 0 6px 6px 0;
-  font-size: 13px;
-  color: #ffa8bb;
-}
-
-/* 画像ビューポート */
-.rd-image-viewport {
-  flex-grow: 1;
-  position: relative;
-  min-height: 250px;
-  margin-bottom: 20px;
-}
-
-.rd-slide-container {
-  width: 100%;
-  height: 100%;
-  background-color: #000;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  overflow: hidden;
+/* --- 3. 左サイドバー (ナビゲーション) --- */
+.sidebar-nav {
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: 24px 16px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.brand-header {
+  display: flex;
   align-items: center;
-  position: relative;
-  cursor: zoom-in;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  transition: border-color 0.3s ease;
+  gap: 12px;
+  padding: 8px;
 }
 
-.rd-slide-container:hover {
-  border-color: rgba(69, 243, 255, 0.2);
+.brand-icon {
+  font-size: 24px;
+  color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), #5fc6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: pulse 3s infinite alternate;
 }
 
-#rd-slide-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  display: block;
-  transition: transform 0.3s ease;
-}
-
-.rd-slide-container:hover #rd-slide-image {
-  transform: scale(1.01);
-}
-
-.rd-image-overlay-tip {
-  position: absolute;
-  bottom: 15px;
-  right: 15px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.rd-slide-container:hover .rd-image-overlay-tip {
-  opacity: 1;
-}
-
-/* 画像左右のナビゲーション矢印 */
-.rd-nav-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(11, 14, 23, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-white);
+.brand-title h2 {
   font-size: 18px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.brand-title p {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 進捗パネル */
+.progress-panel {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s ease;
-  z-index: 10;
-  user-select: none;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-inset);
 }
 
-.rd-nav-arrow:hover {
-  background: var(--bg-sidebar);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  box-shadow: 0 0 15px rgba(69, 243, 255, 0.3);
-}
-
-.rd-prev-arrow {
-  left: 20px;
-}
-
-.rd-next-arrow {
-  right: 20px;
-}
-
-/* 下部コントロールバー */
-.rd-control-bar {
-  height: 60px;
+.progress-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--border-color);
-  padding-top: 15px;
 }
 
-.rd-control-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.rd-control-btn:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-white);
-}
-
-.rd-control-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.rd-control-btn.rd-btn-primary {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: var(--bg-main);
-}
-
-.rd-control-btn.rd-btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-  box-shadow: 0 0 15px rgba(69, 243, 255, 0.3);
-}
-
-.rd-counter-badge {
-  font-size: 15px;
-  font-weight: 600;
+.progress-label {
+  font-size: 12px;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
+}
+
+.progress-percent {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.progress-bar-bg {
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-success), #85e89d);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.progress-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ステップ目次 */
+.step-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition-smooth);
+  border: 1px solid transparent;
+}
+
+.step-menu-item:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.step-menu-item.active {
+  color: var(--text-main);
+  background: rgba(0, 113, 227, 0.15);
+  border-color: rgba(0, 113, 227, 0.3);
+}
+
+.menu-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  transition: var(--transition-smooth);
+}
+
+.step-menu-item.active .menu-num {
+  background-color: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(0, 113, 227, 0.5);
+}
+
+/* --- 4. 中央メインコンテンツ --- */
+.content-body {
+  padding: 40px 5%;
+  overflow-y: auto;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.content-header {
+  margin-bottom: 48px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 24px;
+}
+
+.content-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #ffffff, #b2c5e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.content-header p {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+/* ステップセクション */
+.manual-step {
+  margin-bottom: 64px;
+  padding-top: 16px;
+  scroll-margin-top: 40px; /* スクロール時の余白 */
+  transition: var(--transition-smooth);
+}
+
+.manual-step.completed {
+  opacity: 0.85;
+}
+
+.step-badge-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.step-badge {
+  background-color: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
   letter-spacing: 0.5px;
 }
 
-/* --- 3. 右側：メモ帳サイドバー --- */
-.rd-notes-sidebar {
-  width: 360px;
-  min-width: 320px;
-  height: 100%;
-  background-color: var(--bg-sidebar);
-  border-left: 1px solid var(--border-color);
+.check-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition-smooth);
+}
+
+.check-container:hover {
+  color: var(--text-main);
+}
+
+.check-container input {
+  display: none;
+}
+
+.checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: var(--transition-smooth);
+}
+
+.check-container input:checked + .checkmark {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.check-container input:checked + .checkmark::after {
+  content: '✓';
+  color: #fff;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.manual-step h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* ステップカード */
+.step-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-premium);
   display: flex;
   flex-direction: column;
-  padding: 30px;
-  z-index: 20;
+  gap: 24px;
 }
 
-.rd-notes-header {
-  margin-bottom: 25px;
+.step-instruction p {
+  font-size: 15px;
+  margin-bottom: 16px;
 }
 
-.rd-notes-header h3 {
-  font-size: 18px;
-  color: var(--text-white);
+.step-instruction ol {
+  margin-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.step-instruction ol li::marker {
   font-weight: 700;
-  margin-bottom: 6px;
+  color: var(--color-primary);
 }
 
-.rd-notes-header p {
+/* アラートボックス */
+.alert-box {
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 20px;
+  font-size: 13px;
+  border-left: 4px solid transparent;
+}
+
+.alert-danger {
+  background-color: var(--color-danger-bg);
+  border-left-color: var(--color-danger);
+  color: #ff9b90;
+}
+
+.alert-warning {
+  background-color: var(--color-warning-bg);
+  border-left-color: var(--color-warning);
+  color: #ffd085;
+}
+
+/* 画像コンテナ */
+.step-image-container {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px dashed var(--border-color);
+  background-color: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+}
+
+.step-image:hover {
+  transform: scale(1.02);
+}
+
+/* 画像プレースホルダー */
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+}
+
+.placeholder-icon {
+  font-size: 40px;
+  opacity: 0.5;
+}
+
+.placeholder-text {
+  font-size: 13px;
+  font-family: monospace;
+  background-color: rgba(255, 255, 255, 0.04);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+/* --- 5. 右サイドバー (キーメモ帳) --- */
+.sidebar-notes {
+  background-color: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  padding: 24px 20px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.notes-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.notes-header p {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
 }
 
-.rd-notes-body {
+.notes-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   flex-grow: 1;
-  overflow-y: auto;
 }
 
-.rd-note-field {
-  margin-bottom: 20px;
+.note-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.rd-note-field label {
-  display: block;
+.note-label-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.note-item label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-white);
-  margin-bottom: 8px;
-  letter-spacing: 0.5px;
+  color: var(--text-muted);
 }
 
-.rd-note-field input[type="text"],
-.rd-note-field input[type="password"],
-.rd-note-field textarea {
+.btn-copy {
+  background-color: rgba(0, 113, 227, 0.1);
+  color: var(--color-primary-hover);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-copy:hover {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.note-item input,
+.note-item textarea {
   width: 100%;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  color: var(--text-main);
   padding: 10px 12px;
-  color: var(--text-white);
   font-family: monospace;
   font-size: 13px;
-  transition: all 0.2s ease;
+  transition: var(--transition-smooth);
+}
+
+.note-item input:focus,
+.note-item textarea:focus {
   outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+  background-color: rgba(0, 0, 0, 0.35);
 }
 
-.rd-note-field input:focus,
-.rd-note-field textarea:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 8px rgba(69, 243, 255, 0.15);
-  background-color: rgba(0, 0, 0, 0.4);
-}
-
-.rd-note-field textarea {
-  height: 90px;
+.note-item textarea {
+  height: 80px;
   resize: none;
 }
 
-.rd-notes-footer {
+.notes-footer {
+  padding-top: 16px;
   border-top: 1px solid var(--border-color);
-  padding-top: 20px;
 }
 
-.rd-btn-clear {
+.btn-clear {
   width: 100%;
-  background: transparent;
-  border: 1px dashed rgba(255, 51, 102, 0.3);
-  color: rgba(255, 51, 102, 0.7);
+  background-color: transparent;
+  color: #ff453a;
+  border: 1px dashed rgba(255, 69, 58, 0.4);
   padding: 10px;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-smooth);
 }
 
-.rd-btn-clear:hover {
-  background: rgba(255, 51, 102, 0.05);
-  color: var(--danger-color);
-  border-color: var(--danger-color);
+.btn-clear:hover {
+  background-color: rgba(255, 69, 58, 0.1);
+  border-style: solid;
 }
 
-/* --- 4. 拡大ズームモーダル --- */
-.rd-modal {
+/* --- 6. モーダル ＆ トースト (インタラクティブ要素) --- */
+/* 画像拡大モーダル */
+.zoom-modal {
   position: fixed;
-  z-index: 100;
+  z-index: 1000;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
-  background-color: rgba(5, 7, 15, 0.95);
-  backdrop-filter: blur(10px);
+  background-color: rgba(6, 10, 20, 0.95);
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  animation: fadeIn 0.2s ease-out;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.zoom-modal.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.rd-modal-content {
-  margin: auto;
-  display: block;
+.zoom-content {
   max-width: 90%;
   max-height: 80%;
-  object-fit: contain;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-  animation: zoomIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes zoomIn {
-  from { transform: scale(0.9); }
-  to { transform: scale(1); }
+.zoom-modal.show .zoom-content {
+  transform: scale(1);
 }
 
-.rd-modal-close {
+.zoom-close {
   position: absolute;
-  top: 30px;
-  right: 40px;
-  color: var(--text-muted);
+  top: 24px;
+  right: 32px;
+  color: #fff;
   font-size: 40px;
-  font-weight: bold;
-  transition: color 0.2s ease;
+  font-weight: 300;
   cursor: pointer;
+  transition: var(--transition-smooth);
 }
 
-.rd-modal-close:hover {
-  color: var(--text-white);
+.zoom-close:hover {
+  color: var(--color-primary);
+  transform: rotate(90deg);
 }
 
-#rd-zoom-caption {
-  margin: 15px auto;
-  color: var(--text-white);
-  font-size: 18px;
-  font-weight: 600;
+#zoom-caption {
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
-/* --- 5. トースト通知 --- */
-.rd-toast {
+/* トースト通知 */
+.toast {
   position: fixed;
-  bottom: 30px;
+  bottom: 24px;
   left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--bg-sidebar);
-  border: 1px solid var(--primary-color);
-  color: var(--text-white);
-  padding: 12px 28px;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--color-primary);
+  color: #fff;
+  padding: 12px 24px;
   border-radius: 50px;
   font-size: 14px;
   font-weight: 600;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 15px rgba(69, 243, 255, 0.2);
+  box-shadow: 0 10px 25px rgba(0, 113, 227, 0.4);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 1100;
   pointer-events: none;
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.rd-toast.show {
+.toast.show {
   transform: translateX(-50%) translateY(0);
-  opacity: 1;
 }
 
-/* --- レスポンシブ対応（中画面以下） --- */
+/* --- 7. レスポンシブ対応 (レスポンシブデザイン) --- */
+
+/* 1200px以下：目次を折りたたみ、または2カラム構成へ */
 @media (max-width: 1200px) {
-  .rd-notes-sidebar {
-    display: none; /* 幅が狭い場合はメモ帳を非表示に */
+  #app-container {
+    grid-template-columns: 240px 1fr 280px;
   }
 }
 
+/* 992px以下：3カラムから2カラムに変更 (左サイドバーを結合または非表示) */
+@media (max-width: 992px) {
+  #app-container {
+    grid-template-columns: 1fr 280px;
+  }
+  
+  /* 左サイドバーを非表示にする */
+  .sidebar-nav {
+    display: none;
+  }
+}
+
+/* 768px以下：1カラム（スマホ縦画面対応） */
 @media (max-width: 768px) {
-  .rd-sidebar {
-    display: none; /* スマホ幅ではサイドバーも非表示にし、メインだけに */
+  #app-container {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content-body {
+    padding: 24px 16px 100px 16px; /* 下部にメモ帳ボタン用の余白 */
+  }
+
+  /* メモ帳を画面下部にアコーディオンまたはドロワー化 */
+  .sidebar-notes {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    z-index: 900;
+    transform: translateY(calc(100% - 50px)); /* ヘッダーだけ見せて引っ張る動作 */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  }
+
+  .sidebar-notes.expanded {
+    transform: translateY(0);
+  }
+
+  .notes-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+  }
+
+  .notes-header::after {
+    content: '▲';
+    font-size: 10px;
+    color: var(--color-primary);
+    transition: transform 0.3s;
+  }
+
+  .sidebar-notes.expanded .notes-header::after {
+    transform: rotate(180deg);
+  }
+
+  .notes-body {
+    display: none;
+    padding-top: 16px;
+  }
+
+  .sidebar-notes.expanded .notes-body {
+    display: flex;
+  }
+
+  .notes-footer {
+    display: none;
+  }
+
+  .sidebar-notes.expanded .notes-footer {
+    display: block;
+  }
+}
+
+/* --- 8. Keyframes アニメーション --- */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 1;
   }
 }
