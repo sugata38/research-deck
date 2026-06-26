@@ -4,7 +4,7 @@
 
 > [!IMPORTANT]
 > **最新版ダウンロードはこちら**  
-> 📥 **[ResearchDeck 最新版 (research-deck.zip) をダウンロード](research-deck.zip?raw=true)**  
+> 📥 **[ResearchDeck 最新版 (research-deck.zip) をダウンロード](https://github.com/sugata38/research-deck/raw/main/research-deck.zip)**  
 > *(※インストールには解凍・展開が必要です。導入手順は以下の [🚀 導入手順 (Installation)](#-導入手順-installation) をご覧ください)*
 
 ---
@@ -23,7 +23,7 @@
 ツールをご自身のGoogle Chromeブラウザにインストールする手順です。
 
 ### 1. 拡張機能プログラムのダウンロード
-1. こちらの直接リンク **[research-deck.zip をダウンロード](research-deck.zip?raw=true)** をクリックするか、本リポジトリの右側にある **「Releases（作成したプログラムの完成版を配布する場所）」** セクションから最新のファイルをダウンロードします。
+1. こちらの直接リンク **[research-deck.zip をダウンロード](https://github.com/sugata38/research-deck/raw/main/research-deck.zip)** をクリックするか、本リポジトリの右側にある **「Releases（作成したプログラムの完成版を配布する場所）」** セクションから最新のファイルをダウンロードします。
 2. ダウンロードしたZIPファイルをダブルクリックして解凍（展開）し、`research-deck` フォルダを取り出します。
 
 ### 2. Chromeへのインストール
