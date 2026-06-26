@@ -31,6 +31,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (data.sp_client_secret) clientSecretInput.value = data.sp_client_secret;
     if (data.sp_refresh_token) refreshTokenInput.value = data.sp_refresh_token;
     if (data.sp_seller_id) sellerIdInput.value = data.sp_seller_id;
+
+    // 設定ファイル（manifest.json）のバージョンをフッターに自動反映
+    const manifestData = chrome.runtime.getManifest();
+    const versionSpan = document.getElementById("rd-version");
+    if (versionSpan && manifestData.version) {
+      versionSpan.textContent = `v${manifestData.version}`;
+    }
   } catch (err) {
     console.error("ResearchDeck: 設定の読み込みに失敗しました -", err);
   }
