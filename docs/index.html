@@ -41,11 +41,15 @@
               <li>Amazonセラーセントラルにログインし、画面右上にある **「設定（歯車マーク）」** をクリックして **「出品用アカウント情報」** を開きます。</li>
               <li>画面左側の「登録内容」セクション内にある **「出品者情報」** リンクをクリックします。</li>
               <li>画面中ほどにある **「出品者トークン」** のリンクをクリックします。</li>
-              <li>画面に表示される `A` から始まる英数字の文字列をコピーして保存します。これがツールで設定する **「出品者ID」** です。</li>
+              <li><span class="step-marker">①</span>画面に表示される `A` から始まる英数字の文字列（出品者トークン）の右にある **「コピー」** ボタンをクリックして保存します。</li>
             </ol>
           </div>
           <div class="step-image-container">
-            <img src="images/01_seller_id.png" alt="出品者IDの取得" class="step-image" onerror="handleImageError(this, '01_seller_id.png')">
+            <div class="annotated-image-container">
+              <img src="images/01_seller_id.png" alt="出品者IDの取得" class="step-image" onerror="handleImageError(this, '01_seller_id.png')">
+              <div class="annotation-box" style="left: 25.5%; top: 59.5%; width: 20.0%; height: 3.5%;"></div>
+              <div class="annotation-badge" style="left: 24.5%; top: 58.5%;">①</div>
+            </div>
             <div class="image-placeholder">
               <span class="placeholder-icon">📷</span>
               <span class="placeholder-text">ここに「01_seller_id.png」のスクリーンショット画像を配置してください</span>
@@ -62,13 +66,16 @@
           <div class="step-instruction">
             <p>APIの接続許可を設定するため、セラーセントラルのアプリ開発者ポータルを開きます。</p>
             <ol>
-              <li>セラーセントラルの左上メニュー（三本線マーク）から、**「アプリとサービス」** ➔ **「アプリの開発」** をクリックします。</li>
+              <li><span class="step-marker">①</span>セラーセントラルの左上メニュー（三本線マーク）から、**「アプリとサービス」** ➔ **「アプリの開発」** をクリックします。</li>
               <li>初めてこの画面を開く場合、ソリューションプロバイダーポータルへの紐付け（オンボーディング）画面が表示されることがあります。</li>
-              <li>画面の指示に従い、お使いのアカウントと言語・国（日本など）を選択し、メール認証等の手続きを完了させてポータルのトップ画面へ進んでください。</li>
+              <li>画面指示に従い、お使いのアカウントと言語・国（日本など）を選択し、メール認証等の手続きを完了させてポータルのトップ画面へ進んでください。</li>
             </ol>
           </div>
           <div class="step-image-container">
-            <img src="images/02_app_portal.png" alt="アプリ開発ポータルの表示" class="step-image" onerror="handleImageError(this, '02_app_portal.png')">
+            <div class="annotated-image-container">
+              <img src="images/02_app_portal.png" alt="アプリ開発ポータルの表示" class="step-image" onerror="handleImageError(this, '02_app_portal.png')">
+              <div class="annotation-badge" style="left: 15.8%; top: 85.0%;">①</div>
+            </div>
             <div class="image-placeholder">
               <span class="placeholder-icon">📷</span>
               <span class="placeholder-text">ここに「02_app_portal.png」のスクリーンショット画像を配置してください</span>
@@ -86,15 +93,21 @@
             <p>ツールがAPIにアクセスするための「鍵」となる2つの認証情報を取得します。</p>
             <ol>
               <li>ポータルトップ画面に登録されている開発中のアプリ（例: `NETSEA-Research-Tool` など）の「LWA認証情報」列にある **「表示」** リンクをクリックします。</li>
-              <li>ポップアップ画面に表示された **「クライアントID」**（`amzn1.application-oa2-client.〜`）をコピーして保存します。</li>
-              <li>次に、**「クライアント機密情報（Client Secret）」** のアコーディオンを展開し、表示されるキーをコピーして保存します。</li>
+              <li><span class="step-marker">①</span>ポップアップ画面に表示された **「クライアントID」**（`amzn1.application-oa2-client.〜`）をコピーして保存します。</li>
+              <li><span class="step-marker">②</span>次に、**「クライアント機密情報（Client Secret）」** のアコーディオンを展開し、表示されるキーをコピーして保存します。</li>
             </ol>
             <div class="alert-box alert-danger">
               <strong>⚠️ 注意</strong>: これらはあなたのアカウントを制御できる最も重要な暗号鍵です。絶対に第三者に渡したり公開したりしないでください。
             </div>
           </div>
           <div class="step-image-container">
-            <img src="images/03_lwa_credentials.png" alt="LWA認証情報の取得" class="step-image" onerror="handleImageError(this, '03_lwa_credentials.png')">
+            <div class="annotated-image-container">
+              <img src="images/03_lwa_credentials.png" alt="LWA認証情報の取得" class="step-image" onerror="handleImageError(this, '03_lwa_credentials.png')">
+              <div class="annotation-box" style="left: 33.8%; top: 54.8%; width: 28.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 32.8%; top: 53.8%;">①</div>
+              <div class="annotation-box" style="left: 40.7%; top: 60.1%; width: 28.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 39.7%; top: 59.1%;">②</div>
+            </div>
             <div class="image-placeholder">
               <span class="placeholder-icon">📷</span>
               <span class="placeholder-text">ここに「03_lwa_credentials.png」のスクリーンショット画像を配置してください</span>
@@ -113,14 +126,18 @@
             <ol>
               <li>ポータル画面で、対象アプリの右端にある「アプリの編集」ボタンの右隣にある **「∨」矢印マーク** をクリックし、メニューから **「承認」** を選択します。</li>
               <li>「認可の管理」画面に切り替わったら、マーケットプレイス「日本」の右側にある **「アプリを承認」** ボタンをクリックします。</li>
-              <li>承認が完了すると、画面に非常に長い英数字の文字列である **リフレッシュトークン (Refresh Token)** が発行されます。非常に長いため、必ず **「コピー」** ボタンを押して安全な場所に保存してください。</li>
+              <li><span class="step-marker">①</span>承認完了後、画面に表示される **リフレッシュトークン (Refresh Token)** の右側にある **「コピー」** ボタンをクリックして保存します。</li>
             </ol>
             <div class="alert-box alert-warning">
               <strong>⚠️ 注意</strong>: リフレッシュトークンはこの画面を閉じると二度と再表示できません。必ずここでコピーを保存したことを確認してから画面を閉じてください。
             </div>
           </div>
           <div class="step-image-container">
-            <img src="images/04_refresh_token.png" alt="リフレッシュトークンの取得" class="step-image" onerror="handleImageError(this, '04_refresh_token.png')">
+            <div class="annotated-image-container">
+              <img src="images/04_refresh_token.png" alt="リフレッシュトークンの取得" class="step-image" onerror="handleImageError(this, '04_refresh_token.png')">
+              <div class="annotation-box" style="left: 28.0%; top: 53.5%; width: 55.0%; height: 5.0%;"></div>
+              <div class="annotation-badge" style="left: 27.0%; top: 52.5%;">①</div>
+            </div>
             <div class="image-placeholder">
               <span class="placeholder-icon">📷</span>
               <span class="placeholder-text">ここに「04_refresh_token.png」のスクリーンショット画像を配置してください</span>
@@ -138,13 +155,35 @@
             <p>最後に、取得した4つのキーをツールの設定画面に適用します。</p>
             <ol>
               <li>Chromeブラウザのツールバーにある **ResearchDeckのアイコン** をクリックし、設定（オプション）画面を開きます。</li>
-              <li>先ほど保存した4つのキーを、対応する入力項目（Seller ID, LWA Client ID, LWA Client Secret, Refresh Token）にそれぞれコピー＆ペーストします。</li>
-              <li>入力後、**「接続テスト」** ボタンをクリックし、画面に **「接続成功」** と表示されることを確認します。</li>
-              <li>最後に一番下の **「保存」** ボタンをクリックすれば、すべてのセットアップが完了です！</li>
+              <li>
+                先ほど保存した4つの情報をそれぞれ対応する欄に入力します：
+                <ul style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; list-style-type: none;">
+                  <li><span class="step-marker">①</span>**LWA Client ID**</li>
+                  <li><span class="step-marker">②</span>**LWA Client Secret**</li>
+                  <li><span class="step-marker">③</span>**Refresh Token**</li>
+                  <li><span class="step-marker">④</span>**出品者ID (Seller ID)**</li>
+                </ul>
+              </li>
+              <li><span class="step-marker">⑤</span>入力後、**「接続テスト」** ボタンをクリックし、画面に **「接続成功」** と表示されることを確認します。</li>
+              <li><span class="step-marker">⑥</span>最後に、**「保存する」** ボタンをクリックすれば、すべてのセットアップが完了です！</li>
             </ol>
           </div>
           <div class="step-image-container">
-            <img src="images/05_extension_setup.png" alt="拡張機能への設定" class="step-image" onerror="handleImageError(this, '05_extension_setup.png')">
+            <div class="annotated-image-container">
+              <img src="images/05_extension_setup.png" alt="拡張機能への設定" class="step-image" onerror="handleImageError(this, '05_extension_setup.png')">
+              <div class="annotation-box" style="left: 34.8%; top: 47.5%; width: 30.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 33.8%; top: 46.5%;">①</div>
+              <div class="annotation-box" style="left: 34.8%; top: 58.0%; width: 30.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 33.8%; top: 57.0%;">②</div>
+              <div class="annotation-box" style="left: 34.8%; top: 68.5%; width: 30.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 33.8%; top: 67.5%;">③</div>
+              <div class="annotation-box" style="left: 34.8%; top: 79.5%; width: 30.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 33.8%; top: 78.5%;">④</div>
+              <div class="annotation-box" style="left: 50.8%; top: 87.0%; width: 14.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 49.8%; top: 86.0%;">⑤</div>
+              <div class="annotation-box" style="left: 34.8%; top: 87.0%; width: 14.5%; height: 4.0%;"></div>
+              <div class="annotation-badge" style="left: 33.8%; top: 86.0%;">⑥</div>
+            </div>
             <div class="image-placeholder">
               <span class="placeholder-icon">📷</span>
               <span class="placeholder-text">ここに「05_extension_setup.png」のスクリーンショット画像を配置してください</span>
@@ -161,9 +200,11 @@
   </div>
 
   <!-- 画像拡大ズームモーダル -->
-  <div id="zoom-modal" class="zoom-modal" hidden>
+  <div id="zoom-modal" class="zoom-modal" hidden onclick="closeZoom()">
     <span class="zoom-close" onclick="closeZoom()">&times;</span>
-    <img class="zoom-content" id="zoom-img" alt="拡大画像">
+    <div class="zoom-content-wrapper" onclick="event.stopPropagation()">
+      <!-- ここにクローンされたコンテナが入る -->
+    </div>
     <div id="zoom-caption"></div>
   </div>
 
@@ -179,14 +220,22 @@
 
     // 画像の拡大ズーム機能
     const zoomModal = document.getElementById('zoom-modal');
-    const zoomImg = document.getElementById('zoom-img');
+    const zoomContentWrapper = document.querySelector('.zoom-content-wrapper');
     const zoomCaption = document.getElementById('zoom-caption');
 
-    document.querySelectorAll('.step-image').forEach(img => {
-      img.addEventListener('click', () => {
-        if (img.style.display !== 'none') {
+    document.querySelectorAll('.annotated-image-container').forEach(container => {
+      container.addEventListener('click', () => {
+        const img = container.querySelector('.step-image');
+        if (img && img.style.display !== 'none') {
           zoomModal.hidden = false;
-          zoomImg.src = img.src;
+          
+          // コンテナを複製してモーダルにいれる
+          zoomContentWrapper.innerHTML = '';
+          const clone = container.cloneNode(true);
+          // クローンされた画像はズームイベントを発生させないようにする
+          clone.style.cursor = 'default';
+          zoomContentWrapper.appendChild(clone);
+          
           zoomCaption.textContent = img.alt;
           zoomModal.classList.add('show');
         }
@@ -198,7 +247,7 @@
       setTimeout(() => { zoomModal.hidden = true; }, 300);
     }
 
-    // エッセージキーで閉じる
+    // エスケープキーで閉じる
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !zoomModal.hidden) {
         closeZoom();
