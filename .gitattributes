@@ -1,0 +1,7 @@
+# GitHubの「Download ZIP」時にマニュアル、スクショ、設定ファイルを除外
+docs/ export-ignore
+screenshot/ export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+README.md export-ignore
+research-deck.zip export-ignore
