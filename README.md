@@ -6,8 +6,8 @@
 > **最新版ダウンロードはこちら**  
 > 📥 **[ResearchDeck 最新版 (research-deck.zip) をダウンロード](https://github.com/sugata38/research-deck/raw/main/research-deck.zip)**  
 > 
-> *   **現在の最新バージョン:** `v1.0.2`
-> *   **最終更新日時:** 2026年6月29日
+> *   **現在の最新バージョン:** `v1.0.3`
+> *   **最終更新日時:** 2026年6月30日
 > 
 > *(※インストールには解凍・展開が必要です。導入手順は以下の [🚀 導入手順 (Installation)](#-導入手順-installation) をご覧ください)*
 

@@ -170,16 +170,16 @@ async function handleFetchAmazonData(janCode) {
     }
   }
 
-  // --- 手数料の税込計算（日本の消費税 10% を適用） ---
-  // Amazon SP-APIから取得する各手数料およびツールで算出する保管手数料は税抜価格のため、
-  // 日本国内の消費税率（10%）を上乗せして税込（小数点以下四捨五入）に補正します。
+  // --- 手数料の計算（販売手数料のみ消費税 10% を適用） ---
+  // Amazonの仕様上、販売手数料（Referral Fee）は税抜表記、その他の手数料（FBA配送代行手数料、保管手数料等）は
+  // すでに税込表記となっているため、販売手数料のみに国内消費税率（10%）を上乗せします。
   const TAX_RATE = 1.10;
   const referralFeeTaxed = Math.round(feesData.referralFee * TAX_RATE);
-  const fbaFulfillmentFeeTaxed = Math.round(feesData.fbaFulfillmentFee * TAX_RATE);
-  const monthlyStorageFeeTaxed = Math.round(monthlyStorageFee * TAX_RATE);
+  const fbaFulfillmentFee = feesData.fbaFulfillmentFee; // FBA配送手数料（すでに税込）
+  const monthlyStorageFeeVal = monthlyStorageFee; // 月間保管手数料（すでに税込）
 
-  // 各手数料（税込）を合計したFBA手数料合計
-  const totalFeesTaxed = referralFeeTaxed + fbaFulfillmentFeeTaxed + monthlyStorageFeeTaxed;
+  // 各手数料を合計したFBA手数料合計
+  const totalFeesTaxed = referralFeeTaxed + fbaFulfillmentFee + monthlyStorageFeeVal;
 
   // --- 出品可否の取得結果を処理 ---
   let listingsData = { canSell: null, requiresApproval: false, reasons: [], approvalLink: null };
@@ -207,8 +207,8 @@ async function handleFetchAmazonData(janCode) {
       // 価格・手数料
       amazonPrice,
       referralFee: referralFeeTaxed,
-      fbaFulfillmentFee: fbaFulfillmentFeeTaxed,
-      monthlyStorageFee: monthlyStorageFeeTaxed, // 月間保管手数料（個別の値、税込）
+      fbaFulfillmentFee: fbaFulfillmentFee,
+      monthlyStorageFee: monthlyStorageFeeVal, // 月間保管手数料（個別の値、税込）
       monthlyStorageFeeDetails, // 保管手数料の計算内訳
       totalFees: totalFeesTaxed, // 保管手数料加算後の手数料合計（税込）
       pricingError, // エラー内容をフロントへ伝播する
