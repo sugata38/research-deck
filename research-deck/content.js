@@ -1299,6 +1299,13 @@ async function initializeDetailPage() {
         updated = true;
       }
 
+      // 4. 獲得予定ポイントの更新確認（非同期で遅れて楽天市場のポイントデータがロードされた場合）
+      if (newData.rawPoints !== rakutenData.rawPoints && newData.rawPoints > 0) {
+        console.log(`ResearchDeck: ポイント値が更新されました: ${rakutenData.rawPoints} -> ${newData.rawPoints}`);
+        rakutenData.rawPoints = newData.rawPoints;
+        updated = true;
+      }
+
       if (updated) {
         // クーポン値引き等を反映させて税抜価格を再計算
         const categoryName = (currentAmazonData && currentAmazonData.categoryName) || "";
