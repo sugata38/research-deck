@@ -648,7 +648,7 @@ async function fetchAndRenderAmazonData(shopData) {
       currentAmazonData = result.data;
       renderDashboard(shopData, result.data);
     } else {
-      console.warn("ResearchDeck: Amazonデータの取得に失敗しました。", result ? result.error : "");
+      console.log("ResearchDeck: Amazonデータの取得に失敗しました。", result ? result.error : "");
       const errorData = {
         error: result ? result.error : "通信エラー",
         pricingError: result ? result.pricingError : null,
