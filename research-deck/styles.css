@@ -257,18 +257,22 @@
   color: #ffffff !important;
 }
 
-.rd-identifier-label {
+#rd-dashboard .rd-identifier-label {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em !important;
   text-transform: uppercase;
   color: #9c9690;
   background-color: #e8e4df;
-  padding: 2px 4px;
+  padding: 2px 5px !important;
   border-radius: 4px;
-  width: 32px;
+  min-width: 36px !important;
+  width: auto !important;
   text-align: center;
   flex-shrink: 0;
+  white-space: nowrap !important; /* 絶対に文字を改行させない */
+  box-sizing: border-box !important;
+  display: inline-block !important;
 }
 
 .rd-identifier-value {
