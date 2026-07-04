@@ -803,7 +803,25 @@ async function initializeDetailPage() {
     // 詳細ページ判定（ドメインが楽天またはヤフーショッピングのストアであること）
     const hostname = window.location.hostname;
     const isRakutenDetail = hostname.includes("item.rakuten.co.jp");
-    const isYahooStoreDetail = hostname.includes("store.shopping.yahoo.co.jp");
+    
+    let isYahooStoreDetail = hostname.includes("store.shopping.yahoo.co.jp");
+    if (isYahooStoreDetail) {
+      const path = window.location.pathname;
+      const pathParts = path.split("/").filter(p => p);
+      
+      // Yahoo!ショッピングの個別商品詳細ページは通常 /ストア名/商品ID.html の構造 (パーツ数が2で末尾が.html)
+      // ストアトップや search.html などのシステムページは除外する
+      if (pathParts.length !== 2) {
+        isYahooStoreDetail = false;
+      } else {
+        const lastPart = pathParts[1];
+        const isSystemPage = /^(search|info|custom|news|calendar|index|category|guide)\.html$/i.test(lastPart);
+        const isHtml = lastPart.endsWith(".html");
+        if (isSystemPage || !isHtml) {
+          isYahooStoreDetail = false;
+        }
+      }
+    }
     
     if (!isRakutenDetail && !isYahooStoreDetail) {
       console.log("ResearchDeck: 対象のショップ詳細ページではないため起動をスキップします");
