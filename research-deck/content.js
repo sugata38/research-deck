@@ -846,8 +846,16 @@ async function initializeDetailPage() {
     const hostname = window.location.hostname;
     const isRakutenDetail = hostname.includes("item.rakuten.co.jp");
     
-    // 検証用のデバッグログを追加
-    console.log("DEBUG [ResearchDeck] hostname:", hostname, "isRakutenDetail:", isRakutenDetail);
+    // 楽天ビックの詳細ページ判定
+    let isRakutenBicDetail = hostname.includes("biccamera.rakuten.co.jp");
+    if (isRakutenBicDetail) {
+      const path = window.location.pathname;
+      // 楽天ビックの商品詳細ページは通常 /item/JANコード/ の構造
+      const isItemPage = /\/item\/(\d{13}|\d{8})\b/.test(path);
+      if (!isItemPage) {
+        isRakutenBicDetail = false;
+      }
+    }
     
     let isYahooStoreDetail = hostname.includes("store.shopping.yahoo.co.jp");
     if (isYahooStoreDetail) {
@@ -879,7 +887,7 @@ async function initializeDetailPage() {
       }
     }
     
-    if (!isRakutenDetail && !isYahooStoreDetail && !isLohacoDetail) {
+    if (!isRakutenDetail && !isRakutenBicDetail && !isYahooStoreDetail && !isLohacoDetail) {
       console.log("ResearchDeck: 対象のショップ詳細ページではないため起動をスキップします");
       return;
     }
