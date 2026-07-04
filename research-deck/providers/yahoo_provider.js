@@ -221,8 +221,8 @@ class YahooProvider extends BaseProvider {
         .replace(/[,、]/g, "")
         .replace(/[\s\u00a0\t\r\n]/g, "");
 
-      // 「今すぐ利用」のポイント数を厳密に狙い撃ち (例: 今すぐ利用5.5%(64pt) または 割り込み文字がある構造)
-      const immediateMatch = text.match(/今すぐ利用[^a-zA-Z0-9]*?(?:\d+(?:\.\d+)?%)?\(?(\d+)(?:pt|ポイント|円相当)/i);
+      // 「今すぐ利用」のポイント数を厳密に狙い撃ち (最大20文字までの日本語・記号の割り込みを許容)
+      const immediateMatch = text.match(/今すぐ利用[^a-zA-Z0-9]{0,20}?(?:\d+(?:\.\d+)?%)?\(?(\d+)(?:pt|ポイント|円相当)/i);
       let immediatePoints = 0;
       if (immediateMatch) {
         immediatePoints = parseInt(immediateMatch[1], 10);
@@ -231,8 +231,8 @@ class YahooProvider extends BaseProvider {
         console.log("ResearchDeck: 「今すぐ利用」を検出:", immediatePoints);
       }
 
-      // 「獲得」のポイント数を厳密に狙い撃ち (例: 獲得後日付与1.5%(17pt) のような割り込み文字がある構造)
-      const afterMatch = text.match(/獲得[^a-zA-Z0-9]*?(?:\d+(?:\.\d+)?%)?\(?(\d+)(?:pt|ポイント|円相当)/i);
+      // 「獲得」のポイント数を厳密に狙い撃ち (最大20文字までの日本語・記号の割り込みを許容)
+      const afterMatch = text.match(/獲得[^a-zA-Z0-9]{0,20}?(?:\d+(?:\.\d+)?%)?\(?(\d+)(?:pt|ポイント|円相当)/i);
       let afterPoints = 0;
       if (afterMatch) {
         afterPoints = parseInt(afterMatch[1], 10);
