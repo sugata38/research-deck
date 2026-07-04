@@ -366,6 +366,19 @@ function renderDashboard(shopData, amazonData) {
               </div>
             </span>
           </div>
+          <div class="rd-data-row" style="flex-wrap: wrap; margin-bottom: 2px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span class="rd-data-label">クーポン (%)</span>
+              <span class="rd-data-value" style="display: flex; align-items: center; gap: 4px;">
+                <div class="rd-spinner-container">
+                  <button class="rd-spinner-btn" id="rd-coupon-percent-minus" type="button">−</button>
+                  <input type="number" id="rd-input-coupon-percent" min="0" max="100" step="1" value="${shopData.couponPercentRate || 0}" class="rd-number-input" title="パーセンテージ指定のクーポン割引率を設定できます" />
+                  <button class="rd-spinner-btn" id="rd-coupon-percent-plus" type="button">+</button>
+                </div>
+                <span>%</span>
+              </span>
+            </div>
+          </div>
           <div class="rd-divider"></div>
           <div class="rd-data-row rd-highlight-row">
             <span class="rd-data-label rd-text-bold">実質仕入れ値</span>
@@ -452,13 +465,18 @@ function renderDashboard(shopData, amazonData) {
 
   const extraPointInput = document.getElementById("rd-input-extra-point");
   const couponInput = document.getElementById("rd-input-coupon");
+  const couponPercentInput = document.getElementById("rd-input-coupon-percent");
 
   function updateCalculations() {
     const extraPointRate = parseInt(extraPointInput?.value || 0, 10);
-    const couponValue = parseInt(couponInput?.value || 0, 10);
+    const couponYen = parseInt(couponInput?.value || 0, 10);
+    const couponPercent = parseInt(couponPercentInput?.value || 0, 10);
 
+    // 合計クーポン割引額 = 円引きクーポン額 + (商品価格 * クーポンパーセント)
+    const percentDiscount = Math.floor(shopData.price * (couponPercent / 100));
+    const totalCouponValue = couponYen + percentDiscount;
 
-    const discountedPrice = Math.max(0, shopData.price - couponValue);
+    const discountedPrice = Math.max(0, shopData.price - totalCouponValue);
     const discountedPoints = shopData.price > 0 
       ? Math.floor(shopData.rawPoints * (discountedPrice / shopData.price)) 
       : 0;
@@ -477,7 +495,7 @@ function renderDashboard(shopData, amazonData) {
       taxExcludedInfoEl.innerHTML = `(税抜価格 ¥${formatNumber(taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(extraPoints))}</span>pt)`;
     }
 
-    const netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - couponValue;
+    const netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - totalCouponValue;
     const shopNetCostEl = document.getElementById("rd-rakuten-net-cost");
     if (shopNetCostEl) shopNetCostEl.textContent = `¥${formatNumber(netCost)}`;
     const amazonNetCostEl = document.getElementById("rd-amazon-net-cost");
@@ -529,8 +547,24 @@ function renderDashboard(shopData, amazonData) {
     });
   }
 
+  const couponPercentMinus = document.getElementById("rd-coupon-percent-minus");
+  const couponPercentPlus = document.getElementById("rd-coupon-percent-plus");
+  if (couponPercentMinus && couponPercentPlus && couponPercentInput) {
+    couponPercentMinus.addEventListener("click", () => {
+      const val = Math.max(0, parseInt(couponPercentInput.value || 0, 10) - 1);
+      couponPercentInput.value = val;
+      updateCalculations();
+    });
+    couponPercentPlus.addEventListener("click", () => {
+      const val = Math.min(100, parseInt(couponPercentInput.value || 0, 10) + 1);
+      couponPercentInput.value = val;
+      updateCalculations();
+    });
+  }
+
   if (extraPointInput) extraPointInput.addEventListener("input", updateCalculations);
   if (couponInput) couponInput.addEventListener("input", updateCalculations);
+  if (couponPercentInput) couponPercentInput.addEventListener("input", updateCalculations);
 }
 
 function setupCopyClick(elementId) {
@@ -665,6 +699,7 @@ async function initializeDetailPage() {
   const shopData = provider.extractData();
   
   shopData.extraPointRate = provider.extraPointRateDefault;
+  shopData.couponPercentRate = 0;
   
   const initialDiscountedPrice = Math.max(0, shopData.price - shopData.coupon);
   const initialDiscountedPoints = shopData.price > 0 
@@ -762,8 +797,12 @@ async function initializeDetailPage() {
         } else {
           // チラつき防止ピンポイント更新
           const couponInput = document.getElementById("rd-input-coupon");
+          const couponPercentInput = document.getElementById("rd-input-coupon-percent");
           if (couponInput) {
             couponInput.value = shopData.coupon;
+            if (couponPercentInput) {
+              couponPercentInput.value = shopData.couponPercentRate || 0;
+            }
 
             const priceEl = document.getElementById("rd-rakuten-price");
             if (priceEl) priceEl.textContent = `¥${formatNumber(shopData.price)}`;
