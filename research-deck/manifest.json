@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ResearchDeck",
-  "version": "1.0.5",
+  "version": "1.2.0",
   "description": "楽天市場の商品ページから実質仕入れ値を自動計算し、SP-API経由でAmazonの利益・出品可否・販売数を分析する個人リサーチツール",
   "content_scripts": [
     {
