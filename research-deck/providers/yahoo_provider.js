@@ -316,19 +316,26 @@ class YahooProvider extends BaseProvider {
     ];
 
     const couponValues = [];
+    console.log("--- ResearchDeck Debug: extractCoupon start ---");
 
     for (const selector of couponSelectors) {
       try {
         const elements = this.doc.querySelectorAll(selector);
         for (const el of elements) {
           const text = el.textContent.replace(/[,、]/g, "");
+          console.log(`[Selector Match] Selector: ${selector}, Text: "${text.trim()}"`);
           const minLimit = this.extractMinPurchaseLimit(text);
-          if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) continue;
+          if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) {
+            console.log(` -> Skipped by minLimit: ${minLimit}`);
+            continue;
+          }
 
           // 1. 円引きクーポンの判定 (例: 500円OFF, 500円引き)
           const yenMatches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/g);
           for (const match of yenMatches) {
-            couponValues.push(parseInt(match[1], 10));
+            const val = parseInt(match[1], 10);
+            console.log(` -> Found Selector Yen Coupon: ${val}円`);
+            couponValues.push(val);
           }
 
           // 2. %引きクーポンの判定 (例: 5%OFF, 10%引き)
@@ -337,6 +344,7 @@ class YahooProvider extends BaseProvider {
             const pct = parseInt(match[1], 10);
             if (pct > 0 && pct <= 100 && currentPrice > 0) {
               const discount = Math.floor(currentPrice * (pct / 100));
+              console.log(` -> Found Selector Percent Coupon: ${pct}% (discount: ${discount}円)`);
               couponValues.push(discount);
             }
           }
@@ -377,24 +385,33 @@ class YahooProvider extends BaseProvider {
           const end = Math.min(bodyText.length, matchIndex + match[0].length + 50);
           const contextText = bodyText.slice(start, end);
 
-          // 周辺文脈に「クーポン」または「coupon」の記述がない場合は誤検出（単なる定価値引き等の説明）としてスキップ
           if (!/クーポン|coupon/i.test(contextText)) continue;
 
+          console.log(`[Text Match] Pattern: ${pattern}, Match: "${match[0]}", Context: "${contextText.trim()}"`);
+
           const minLimit = this.extractMinPurchaseLimit(contextText);
-          if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) continue;
+          if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) {
+            console.log(` -> Skipped by minLimit: ${minLimit}`);
+            continue;
+          }
 
           if (match[0].includes("%")) {
             if (val > 0 && val <= 100 && currentPrice > 0) {
-              couponValues.push(Math.floor(currentPrice * (val / 100)));
+              const discount = Math.floor(currentPrice * (val / 100));
+              console.log(` -> Found Text Percent Coupon: ${val}% (discount: ${discount}円)`);
+              couponValues.push(discount);
             }
           } else {
+            console.log(` -> Found Text Yen Coupon: ${val}円`);
             couponValues.push(val);
           }
         }
       }
     }
 
-    return couponValues.length > 0 ? Math.max(...couponValues) : 0;
+    const finalVal = couponValues.length > 0 ? Math.max(...couponValues) : 0;
+    console.log(`--- ResearchDeck Debug: final value -> ${finalVal} ---`);
+    return finalVal;
   }
 
   /**
