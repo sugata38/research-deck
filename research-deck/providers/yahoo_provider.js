@@ -348,7 +348,10 @@ class YahooProvider extends BaseProvider {
     if (this.doc.body) {
       const clone = this.doc.body.cloneNode(true);
       const excludedSelectors = [
-        "script", "style", "#commonHeader", "#commonFooter"
+        "script", "style", "header", "footer", "iframe", "nav",
+        "#commonHeader", "#commonFooter", "[id*='header' i]", "[id*='footer' i]",
+        "[class*='header' i]", "[class*='footer' i]", "[class*='nav' i]", "[class*='menu' i]",
+        ".elHeader", ".elFooter", "#ycgheader", "#ycgfooter"
       ];
       for (const sel of excludedSelectors) {
         try {
@@ -359,10 +362,10 @@ class YahooProvider extends BaseProvider {
 
       const bodyText = clone.textContent.replace(/[,、]/g, "");
       const couponPatterns = [
-        /(\d+)\s*円\s*(?:OFF|off|オフ)\s*クーポン/gi,
+        /(\d+)\s*円\s*(?:OFF|off|オフ)?\s*クーポン/gi,
         /クーポン[\s:：]*(\d+)\s*円/gi,
-        /(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引)/gi,
-        /(\d+)\s*%\s*(?:OFF|off|オフ|引|引き|割引)/gi, 
+        /(\d+)\s*%\s*(?:OFF|off|オフ)?\s*クーポン/gi,
+        /クーポン[\s:：]*(\d+)\s*%/gi,
       ];
 
       for (const pattern of couponPatterns) {
