@@ -221,8 +221,8 @@ class YahooProvider extends BaseProvider {
         .replace(/[,、]/g, "")
         .replace(/[\s\u00a0\t\r\n]/g, "");
 
-      // 「今すぐ利用」のポイント数を狙い撃ち (キーワードから30文字以内にある最初のpt表記を取得)
-      const immediateMatch = text.match(/今すぐ利用.{0,30}?(\d+)(?:pt|ポイント|円相当)/i);
+      // 「今すぐ利用」のポイント数を厳密に狙い撃ち (直後にパーセンテージ % が含まれる内訳の構造のみ)
+      const immediateMatch = text.match(/今すぐ利用.{0,10}?\d+(?:\.\d+)?%.{0,10}?(\d+)(?:pt|ポイント|円相当)/i);
       let immediatePoints = 0;
       if (immediateMatch) {
         immediatePoints = parseInt(immediateMatch[1], 10);
@@ -231,8 +231,8 @@ class YahooProvider extends BaseProvider {
         console.log("ResearchDeck: 「今すぐ利用」を検出:", immediatePoints);
       }
 
-      // 「獲得」のポイント数を狙い撃ち (キーワードから30文字以内にある最初のpt表記を取得)
-      const afterMatch = text.match(/獲得.{0,30}?(\d+)(?:pt|ポイント|円相当)/i);
+      // 「獲得」のポイント数を厳密に狙い撃ち (直後にパーセンテージ % が含まれる内訳の構造のみ)
+      const afterMatch = text.match(/獲得.{0,15}?\d+(?:\.\d+)?%.{0,10}?(\d+)(?:pt|ポイント|円相当)/i);
       let afterPoints = 0;
       if (afterMatch) {
         afterPoints = parseInt(afterMatch[1], 10);
