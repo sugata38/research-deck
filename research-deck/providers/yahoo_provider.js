@@ -374,6 +374,9 @@ class YahooProvider extends BaseProvider {
           const end = Math.min(bodyText.length, matchIndex + match[0].length + 50);
           const contextText = bodyText.slice(start, end);
 
+          // 周辺文脈に「クーポン」または「coupon」の記述がない場合は誤検出（単なる定価値引き等の説明）としてスキップ
+          if (!/クーポン|coupon/i.test(contextText)) continue;
+
           const minLimit = this.extractMinPurchaseLimit(contextText);
           if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) continue;
 
