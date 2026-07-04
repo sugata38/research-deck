@@ -7,7 +7,8 @@
     {
       "matches": [
         "https://item.rakuten.co.jp/*",
-        "https://store.shopping.yahoo.co.jp/*"
+        "https://store.shopping.yahoo.co.jp/*",
+        "https://lohaco.yahoo.co.jp/*"
       ],
       "js": [
         "providers/base_provider.js",

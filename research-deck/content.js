@@ -839,7 +839,7 @@ async function initializeDetailPage() {
   try {
     initProvider();
     
-    // 詳細ページ判定（ドメインが楽天またはヤフーショッピングのストアであること）
+    // 詳細ページ判定（ドメインが楽天、ヤフーショッピング、またはLOHACOであること）
     const hostname = window.location.hostname;
     const isRakutenDetail = hostname.includes("item.rakuten.co.jp");
     
@@ -862,7 +862,18 @@ async function initializeDetailPage() {
       }
     }
     
-    if (!isRakutenDetail && !isYahooStoreDetail) {
+    let isLohacoDetail = hostname.includes("lohaco.yahoo.co.jp");
+    if (isLohacoDetail) {
+      const path = window.location.pathname;
+      const pathParts = path.split("/").filter(p => p);
+      
+      // LOHACOの個別商品詳細ページは通常 /store/ストアID/item/商品ID/ の構造 (パーツ数が4、0番目がstore、2番目がitem)
+      if (pathParts.length !== 4 || pathParts[0] !== "store" || pathParts[2] !== "item") {
+        isLohacoDetail = false;
+      }
+    }
+    
+    if (!isRakutenDetail && !isYahooStoreDetail && !isLohacoDetail) {
       console.log("ResearchDeck: 対象のショップ詳細ページではないため起動をスキップします");
       return;
     }
