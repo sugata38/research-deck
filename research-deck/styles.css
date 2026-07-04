@@ -337,6 +337,11 @@
   background-color: #c4866b;
 }
 
+/* ヤフーショッピングセクションのドット: 落ち着いたマスタード */
+.rd-dot-yahoo {
+  background-color: #d4a359;
+}
+
 /* 利益計算セクションのドット: セージグリーン */
 .rd-dot-profit {
   background-color: #7c8c6e;
@@ -601,30 +606,78 @@ a.rd-badge:active {
   letter-spacing: 0.02em;
 }
 
-/* --- 追加ポイントの数値入力フォーム --- */
-.rd-number-input {
-  width: 50px;
-  text-align: right;
-  padding: 2px 6px;
+/* --- 追加ポイントの数値入力フォーム (カスタムスピンボタン) --- */
+.rd-spinner-container {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid #eae6e1;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  color: #2c2c2c;
+  border-radius: 6px;
   background-color: #ffffff;
-  outline: none;
-  transition: border-color 0.15s ease;
+  overflow: hidden;
+  height: 24px;
+  vertical-align: middle;
 }
 
-.rd-number-input:focus {
-  border-color: #6b7f94; /* フォーカス時にスレートブルーで強調 */
+.rd-spinner-container:focus-within {
+  border-color: #6b7f94; /* 入力欄フォーカス時に枠線を強調 */
 }
 
-/* Chrome等のブラウザでスピンボタン（上下矢印）を常時表示 */
-.rd-number-input::-webkit-inner-spin-button,
-.rd-number-input::-webkit-outer-spin-button {
-  opacity: 1;
+/* スピンボタン内のインプット枠線を消して一体化 */
+#rd-dashboard .rd-spinner-container input.rd-number-input {
+  border: none !important;
+  width: 28px !important;
+  height: 100% !important;
+  padding: 0 4px !important;
+  text-align: center !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+  outline: none !important;
+  color: #2c2c2c !important;
+  margin: 0 !important;
+}
+
+/* クーポン用の幅調整 */
+#rd-dashboard .rd-spinner-container #rd-input-coupon {
+  width: 48px !important;
+}
+
+.rd-spinner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 100%;
+  border: none !important;
+  background-color: #f7f5f0 !important;
+  color: #6b7f94 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  user-select: none;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.rd-spinner-btn:hover {
+  background-color: #eae6e1 !important;
+  color: #2c2c2c !important;
+}
+
+.rd-spinner-btn:active {
+  background-color: #dcd7ce !important;
+}
+
+/* ブラウザ標準のスピンボタン（矢印）は完全に非表示にする */
+#rd-dashboard input.rd-number-input::-webkit-inner-spin-button,
+#rd-dashboard input.rd-number-input::-webkit-outer-spin-button,
+#rd-input-extra-point::-webkit-inner-spin-button,
+#rd-input-extra-point::-webkit-outer-spin-button,
+#rd-input-coupon::-webkit-inner-spin-button,
+#rd-input-coupon::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
 }
 
 /* --- 保管手数料の内訳ツールチップ --- */

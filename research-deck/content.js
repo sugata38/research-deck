@@ -1,533 +1,45 @@
 // ============================================================
 // ResearchDeck - Content Script
-// 楽天市場の商品ページから情報を抽出し、
+// 各ショッピングサイトから情報を抽出し、
 // SP-API経由でAmazonの利益・出品可否・販売数を表示するツール
 // ============================================================
 
-// コピー用SVGアイコン（重ね合わせたダブルスクエア記号。Lucide Copy icon）
+// コピー用SVGアイコン
 const COPY_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block; margin-left: 2px;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
 
-// グローバル（モジュール）スコープでの状態管理変数
+// グローバルスコープでの状態管理変数
 let currentAmazonData = null;
 let currentAutoCoupon = 0;
 let currentAutoExtraRate = 0;
+let provider = null; // 現在のショッピングサイト用プロバイダーのインスタンス
 
 // ============================================================
-// 1. 楽天画面からのデータ抽出（スクレイピング）
+// 1. プロバイダーの初期化
 // ============================================================
-
-/**
- * JANコード（GTIN-13 / GTIN-8）のチェックデジットが正しいか検証する
- * 楽天の商品管理番号（ただの連番など）をJANコードと誤認するのを防ぐために使用します。
- * @param {string} code - 検証する数値文字列（8桁または13桁）
- * @returns {boolean} 正しいJANコードであればtrue
- */
-function isValidJanCode(code) {
-  if (!code) return false;
-  if (!/^\d+$/.test(code)) return false;
-
-  if (code.length === 13) {
-    let sum = 0;
-    for (let i = 0; i < 12; i++) {
-      const digit = parseInt(code[i], 10);
-      sum += (i % 2 === 0) ? digit : digit * 3;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return checkDigit === parseInt(code[12], 10);
-  } else if (code.length === 8) {
-    let sum = 0;
-    for (let i = 0; i < 7; i++) {
-      const digit = parseInt(code[i], 10);
-      sum += (i % 2 === 0) ? digit * 3 : digit;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return checkDigit === parseInt(code[7], 10);
-  }
-  return false;
-}
-
-/**
- * JSON-LD (構造化データ) から JANコードと価格を抽出する
- * @param {Document} doc - 対象ドキュメント
- * @returns {Object|null} { jan, price } または null
- */
-function extractFromJsonLd(doc) {
-  const jsonLdEls = doc.querySelectorAll('script[type="application/ld+json"]');
-  for (const el of jsonLdEls) {
-    try {
-      const data = JSON.parse(el.textContent);
-      const objects = Array.isArray(data) ? data : [data];
-      for (const obj of objects) {
-        if (obj && (obj["@type"] === "Product" || (typeof obj["@type"] === "string" && obj["@type"].includes("Product")))) {
-          let jan = obj.gtin13 || obj.gtin8 || obj.gtin || obj.mpn || null;
-          let price = null;
-          
-          if (obj.offers) {
-            const offers = Array.isArray(obj.offers) ? obj.offers : [obj.offers];
-            for (const offer of offers) {
-              if (offer && offer.price) {
-                const parsedPrice = parseInt(String(offer.price).replace(/[^0-9]/g, ""), 10);
-                if (!isNaN(parsedPrice) && parsedPrice > 0) {
-                  price = parsedPrice;
-                  break;
-                }
-              }
-            }
-          }
-          
-          // JANコードの妥当性検証
-          if (jan) {
-            const match = String(jan).match(/\d+/);
-            if (match && isValidJanCode(match[0])) {
-              jan = match[0];
-            } else {
-              jan = null;
-            }
-          }
-          
-          if (jan || price) {
-            return { jan, price };
-          }
-        }
-      }
-    } catch (e) {
-      // パース失敗は無視
+function initProvider() {
+  const hostname = window.location.hostname;
+  if (hostname.includes("rakuten.co.jp")) {
+    provider = new RakutenProvider(document);
+  } else if (hostname.includes("yahoo.co.jp")) {
+    provider = new YahooProvider(document);
+  } else {
+    // 予期しないサイト用のフォールバック（item-page-app-dataがあるかで楽天と判定）
+    if (document.getElementById("item-page-app-data") || document.querySelector(".item-price, .primary--2kjQA")) {
+      provider = new RakutenProvider(document);
+    } else {
+      provider = new BaseProvider(document); // 動作しないダミー
     }
   }
-  return null;
-}
-
-/**
- * 楽天の商品ページからJANコード（バーコード番号）を抽出する
- * チェックデジットの検証を行い、不正な数値（管理用の型番や商品ID）の誤取得を排除します。
- * @returns {string|null} 正しいJANコード（13桁の数字または8桁）あるいはnull
- */
-function extractJanCode(doc = document) {
-  // --- 方法1: 商品説明テーブル内の「JAN」行を探す ---
-  const tableRows = doc.querySelectorAll(
-    "table tr, .item-description table tr, .rakutenLimitedId_ItemDescriptionInner table tr"
-  );
-  for (const row of tableRows) {
-    const headerCell = row.querySelector("th, td:first-child");
-    if (headerCell && /jan|ジャン|バーコード/i.test(headerCell.textContent)) {
-      const valueCell = row.querySelector("td:last-child, td:nth-child(2)");
-      if (valueCell) {
-        // 13桁または8桁の数字を抽出
-        const match = valueCell.textContent.match(/\d{13}|\d{8}/);
-        if (match && isValidJanCode(match[0])) return match[0];
-      }
-    }
-  }
-
-  // --- 方法2: ページ全体のテキストから「JAN:数字」パターンを探す（改行や記号を考慮して強化） ---
-  const bodyText = doc.body ? doc.body.textContent : "";
-  const janPatterns = [
-    /JAN(?:コード)?[\s:：\n\r]*(\d{13})/i,
-    /バーコード[\s:：\n\r]*(\d{13})/i,
-    /JAN(?:コード)?[\s:：\n\r]*(\d{8})/i,
-    /バーコード[\s:：\n\r]*(\d{8})/i,
-  ];
-
-  for (const pattern of janPatterns) {
-    const match = bodyText.match(pattern);
-    if (match && isValidJanCode(match[1])) return match[1];
-  }
-
-  // ページ内の13桁の独立した数値をすべて抽出して検証（フォールバック）
-  const allNumbers13 = bodyText.match(/\b\d{13}\b/g) || [];
-  for (const num of allNumbers13) {
-    if (isValidJanCode(num)) return num;
-  }
-
-  // ページ内の8桁 of 独立した数値をすべて抽出して検証（フォールバック）
-  const allNumbers8 = bodyText.match(/\b\d{8}\b/g) || [];
-  for (const num of allNumbers8) {
-    if (isValidJanCode(num)) return num;
-  }
-
-  // --- 方法3: 商品番号（楽天独自の管理番号）を最終フォールバックとして取得（チェックデジット検証付き） ---
-  const itemNumberEl = doc.querySelector(
-    ".item-number span, .rakutenLimitedId_ItemNumber span"
-  );
-  if (itemNumberEl) {
-    const numMatch = itemNumberEl.textContent.match(/\d+/);
-    if (numMatch && isValidJanCode(numMatch[0])) return numMatch[0];
-  }
-
-  return null;
-}
-
-/**
- * 商品価格（税込）を抽出する
- * @returns {number} 税込価格（数値）。取得できない場合は0
- */
-function extractPrice(doc = document) {
-  // 1. メタタグからの抽出（SEO用の静的HTMLで極めて堅牢）
-  const metaSelectors = [
-    'meta[property="product:price:amount"]',
-    'meta[itemprop="price"]',
-    'meta[name="twitter:data1"]'
-  ];
-  
-  for (const selector of metaSelectors) {
-    const el = doc.querySelector(selector);
-    if (el) {
-      const content = el.getAttribute("content");
-      if (content) {
-        const num = parseInt(content.replace(/[^0-9]/g, ""), 10);
-        if (!isNaN(num) && num > 0) return num;
-      }
-    }
-  }
-
-  // 2. 楽天でよく使われる価格表示セレクタ候補
-  const priceSelectors = [
-    // 新デザイン系
-    ".primary--2kjQA", // 最新の価格クラス
-    ".price--OX_YW",
-    ".price2",
-    "[class*='price'] .important",
-    // 従来デザイン系
-    ".price",
-    ".item-price",
-    "#priceCalculationConfig",
-    ".rakutenLimitedId_ItemPrice",
-    // 一般的なパターン
-    'span[itemprop="price"]',
-    ".sale_price",
-  ];
-
-  for (const selector of priceSelectors) {
-    const el = doc.querySelector(selector);
-    if (el) {
-      // itemprop="price"の場合はcontent属性に数値が入っていることがある
-      const contentAttr = el.getAttribute("content");
-      if (contentAttr) {
-        const num = parseInt(contentAttr, 10);
-        if (!isNaN(num) && num > 0) return num;
-      }
-
-      // テキストからカンマや「円」を除去して数値化
-      const text = el.textContent.replace(/[,、円税込（）()]/g, "").trim();
-      const match = text.match(/\d+/);
-      if (match) {
-        const num = parseInt(match[0], 10);
-        if (num > 0) return num;
-      }
-    }
-  }
-
-  return 0;
-}
-
-/**
- * 獲得予定ポイント数を抽出する
- * ユーザーがログインしている場合に表示される「〇〇ポイント」の数字
- * @returns {number} ポイント数。取得できない場合は0
- */
-function extractPoints(doc = document) {
-  // --- 1. 新アプローチ: 「内訳」というテキストを含む要素の周辺から数値を抽出（最も堅牢） ---
-  const allElements = doc.getElementsByTagName("*");
-  for (const el of allElements) {
-    if (el.textContent && /^(内訳|ポイントの内訳)$/i.test(el.textContent.trim())) {
-      // 「内訳」要素が見つかったら、その親要素（3階層上まで）を走査
-      let parent = el.parentElement;
-      for (let depth = 0; depth < 3; depth++) {
-        if (!parent) break;
-        const parentText = parent.textContent.replace(/[,、]/g, "");
-        // 例: "582ポイント 内訳" または "582ポイント内訳" などのテキストから数値を抽出
-        const match = parentText.match(/(\d+)\s*ポイント/);
-        if (match) {
-          const val = parseInt(match[1], 10);
-          if (val > 0 && val < 1000000) {
-            console.log("ResearchDeck: 「内訳」周辺の親要素からポイントを検出しました:", val);
-            return val;
-          }
-        }
-        parent = parent.parentElement;
-      }
-    }
-  }
-
-  // --- 2. ポイント表示エリアのセレクタ候補による抽出 ---
-  const pointSelectors = [
-    // 新デザイン系
-    ".bdg-point-display", // 最新 of ポイント表示クラス
-    ".getPoint",
-    ".point-firing",
-    "[class*='point'] .important",
-    "[class*='deal'] .important", // スーパーDEAL対応
-    // 従来デザイン系
-    ".rakutenLimitedId_PointEarning",
-    ".item-points",
-    "#getPoint",
-    // SPU（スーパーポイントアッププログラム）関連
-    ".spu-point",
-    ".point-total",
-  ];
-
-  for (const selector of pointSelectors) {
-    const el = doc.querySelector(selector);
-    if (el) {
-      // 「最大1,234ポイント」や「1,234ポイント」からカンマを除去して数値を抽出
-      const text = el.textContent.replace(/[,、]/g, "");
-      const match = text.match(/(\d+)\s*ポイント/);
-      if (match) return parseInt(match[1], 10);
-
-      // 「ポイント」表記がない場合も数字だけで試みる
-      const numMatch = text.match(/\d+/);
-      if (numMatch) {
-        const num = parseInt(numMatch[0], 10);
-        // ポイント数として妥当な範囲（1〜100万）
-        if (num > 0 && num < 1000000) return num;
-      }
-    }
-  }
-
-  // --- 3. クラス名に point または deal を含む要素から正規表現で抽出 ---
-  const candidateElements = doc.querySelectorAll(
-    "[class*='point'], [class*='Point'], [class*='deal'], [class*='Deal']"
-  );
-  for (const el of candidateElements) {
-    if (el.children.length === 0 || (el.children.length === 1 && el.querySelector("span"))) {
-      const text = el.textContent.replace(/[,、]/g, "").trim();
-      const match = text.match(/^(\d+)\s*ポイント/);
-      if (match) {
-        const val = parseInt(match[1], 10);
-        if (val > 0 && val < 1000000) {
-          console.log("ResearchDeck: クラス名部分一致からポイントを検出しました:", val);
-          return val;
-        }
-      }
-    }
-  }
-
-  // --- 4. フォールバック: ページ全文からポイント表記を検索 ---
-  const bodyText = doc.body ? doc.body.textContent.replace(/[,、]/g, "") : "";
-  const pointPatterns = [
-    /獲得予定ポイント[\s:：]*(\d+)/,
-    /(\d+)\s*ポイント(?:獲得|進呈|付与)/,
-    /(\d+)\s*ポイント\s*(?:内訳|[\(（])/ // "582ポイント 内訳" などに対応
-  ];
-
-  for (const pattern of pointPatterns) {
-    const match = bodyText.match(pattern);
-    if (match) return parseInt(match[1], 10);
-  }
-
-  return 0;
-}
-
-/**
- * クーポン割引金額を抽出する
- * 「〇〇円OFFクーポン」などの表記から金額を取得
- * @returns {number} クーポン金額の合計。取得できない場合は0
- */
-/**
- * 要素がヘッダー、フッター、サイドバーなどのショップ共通広告・ナビゲーション領域にあるか判定する
- */
-function isInExcludedArea(el) {
-  const excludedSelectors = [
-    // 楽天全体の共通ヘッダー・フッター（共通の200円エントリーキャンペーン等がある場所）
-    "#commonHeader",
-    "#commonFooter",
-    "#grHeader",
-    "#grFooter",
-    "#partsHeader",
-    "#partsFooter",
-    // ショップ独自のメインヘッダー看板エリア（共通の200円バナー看板がある場所）
-    ".shop-header",
-    ".shopHeader",
-    "#shopHeader",
-    "#shopheader",
-    // おすすめ商品（広告）などの他商品用エリア
-    ".recommend",
-    ".recommendation",
-    "[class*='recommend']",
-    "[id*='recommend']",
-    // 左メニュー（共通ナビゲーション等）
-    ".left-column",
-    "#left-column"
-  ];
-
-  for (const selector of excludedSelectors) {
-    try {
-      if (el.closest(selector)) {
-        return true;
-      }
-    } catch (e) {
-      // セレクタエラーは無視
-    }
-  }
-  return false;
-}
-
-/**
- * クーポンのテキストや周辺情報から最低購入金額（〇〇円以上）を抽出する
- * @param {string} text - スキャン対象のテキスト
- * @returns {number} 最低購入金額。ない場合は 0
- */
-function extractMinPurchaseLimit(text) {
-  if (!text) return 0;
-  // カンマを除去
-  const cleanText = text.replace(/[,、]/g, "");
-
-  // 1. 「〇〇円以上」のパターン (例: 10000円以上)
-  const yenMatch = cleanText.match(/(\d+)\s*円以上/);
-  if (yenMatch) {
-    return parseInt(yenMatch[1], 10);
-  }
-
-  // 2. 「〇万円以上」のパターン (例: 1万円以上, 1.5万円以上)
-  const manYenMatch = cleanText.match(/(\d+(?:\.\d+)?)\s*万円以上/);
-  if (manYenMatch) {
-    return Math.floor(parseFloat(manYenMatch[1]) * 10000);
-  }
-
-  return 0;
-}
-
-/**
- * クーポン割引金額を抽出する
- * 「〇〇円OFFクーポン」などの表記から金額を取得
- * @returns {number} クーポン金額。取得できない場合は0
- */
-function extractCoupon(doc = document, currentPrice = 0) {
-  // --- クーポン表示エリアのセレクタ候補（以前のコードに準拠） ---
-  const couponSelectors = [
-    // 新デザイン系（大文字小文字を区別せず match させるため i フラグ付きの属性セレクタを採用）
-    ".coupon-area",
-    ".coupon",
-    "[class*='coupon' i]",
-    "[class*='racoupon' i]",
-    "[class*='ra-coupon' i]",
-    // 従来デザイン系
-    ".rakutenLimitedId_Coupon",
-    ".item-coupon",
-    "#coupon",
-    // ショップクーポン
-    ".shop-coupon",
-    ".coupon-badge",
-  ];
-
-  const couponValues = [];
-
-  // 1. クーポン表示要素からの抽出（非表示スライドもカバーするため textContent を使用）
-  for (const selector of couponSelectors) {
-    try {
-      const elements = doc.querySelectorAll(selector);
-      for (const el of elements) {
-        // textContent を使って非表示スライドのクーポンもスキャンする
-        const text = el.textContent.replace(/[,、]/g, "");
-
-        // クーポン適用条件の判定（商品価格が最低購入金額を満たしているかチェック）
-        const minLimit = extractMinPurchaseLimit(text);
-        if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) {
-          console.log(`ResearchDeck: クーポン適用外（商品価格 ¥${currentPrice} < 最低購入条件 ¥${minLimit}）：`, text);
-          continue;
-        }
-
-        // 「1,000円OFF」「500円引き」「300円クーポン」など多様なパターンに対応
-        const matches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/g);
-        for (const match of matches) {
-          couponValues.push(parseInt(match[1], 10));
-        }
-      }
-    } catch (e) {
-      // セレクタエラー is ignored
-    }
-  }
-
-  // 2. フォールバック: ページ全文からクーポン表記を検索
-  // セレクタ検索で別のクーポンを拾ってしまっても、本命のクーポンを全文スキャンで確実に救済するため、常に実行します。
-  if (doc.body) {
-    const clone = doc.body.cloneNode(true);
-    
-    // スクリプトやスタイル、および楽天共通ヘッダー・フッターなどの無関係なエリアを除外
-    const excludedSelectors = [
-      "script",
-      "style",
-      "#commonHeader",
-      "#commonFooter",
-      "#grHeader",
-      "#grFooter",
-      "#partsHeader",
-      "#partsFooter",
-      ".shop-header",
-      ".shopHeader"
-    ];
-    
-    for (const sel of excludedSelectors) {
-      try {
-        const els = clone.querySelectorAll(sel);
-        els.forEach(el => el.remove());
-      } catch (e) {}
-    }
-
-    const bodyText = clone.textContent.replace(/[,、]/g, "");
-    const couponPatterns = [
-      /(\d+)\s*円\s*(?:OFF|off|オフ)\s*クーポン/gi,
-      /クーポン[\s:：]*(\d+)\s*円/gi,
-      /(\d+)\s*円\s*(?:OFF|off|オフ|引|引き|割引)/gi, // 単体の「2500円OFF」や「2500円引き」も漏れなくキャッチ
-    ];
-
-    for (const pattern of couponPatterns) {
-      const matches = bodyText.matchAll(pattern);
-      for (const match of matches) {
-        const couponVal = parseInt(match[1], 10);
-
-        // マッチした位置の前後50文字を切り出して利用条件をチェック
-        const matchIndex = match.index;
-        const start = Math.max(0, matchIndex - 50);
-        const end = Math.min(bodyText.length, matchIndex + match[0].length + 50);
-        const contextText = bodyText.slice(start, end);
-
-        // クーポン適用条件の判定
-        const minLimit = extractMinPurchaseLimit(contextText);
-        if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) {
-          console.log(`ResearchDeck: 全文クーポン適用外（商品価格 ¥${currentPrice} < 最低購入条件 ¥${minLimit}）：`, contextText);
-          continue;
-        }
-
-        couponValues.push(couponVal);
-      }
-    }
-  }
-
-  // 検出されたクーポン額の中で「最大値」を採用する（重複合算によるブレを完全に防ぐため）
-  const maxCoupon = couponValues.length > 0 ? Math.max(...couponValues) : 0;
-  console.log("ResearchDeck: 抽出されたクーポン最大額:", maxCoupon);
-  return maxCoupon;
+  console.log(`ResearchDeck: プロバイダーを初期化しました -> ${provider.siteName}`);
 }
 
 // ============================================================
-// 2. 実質仕入れ値の計算
-// ============================================================
-
-/**
- * 実質仕入れ値を計算する
- * 実質仕入れ値 = 商品価格 - 獲得ポイント - クーポン金額
- * @param {number} price - 商品価格（税込）
- * @param {number} points - 獲得予定ポイント
- * @param {number} coupon - クーポン割引金額
- * @returns {number} 実質仕入れ値
- */
-function calculateNetCost(price, points, coupon) {
-  return price - points - coupon;
-}
-
-// ============================================================
-// 3. 利益計算
+// 2. 利益計算
 // ============================================================
 
 /**
  * 利益を計算する
  * 粗利益 = Amazon販売価格 - FBA手数料合計 - 実質仕入れ値
- *
- * @param {number} amazonPrice - Amazon販売価格
- * @param {number} totalFees - FBA手数料合計
- * @param {number} netCost - 実質仕入れ値
- * @returns {Object} { profit, profitRate }
  */
 function calculateProfit(amazonPrice, totalFees, netCost) {
   if (!amazonPrice || amazonPrice <= 0) {
@@ -539,18 +51,16 @@ function calculateProfit(amazonPrice, totalFees, netCost) {
 
   return {
     profit: Math.round(profit),
-    profitRate: Math.round(profitRate * 10) / 10, // 小数第1位まで
+    profitRate: Math.round(profitRate * 10) / 10,
   };
 }
 
 // ============================================================
-// 4. UIの描画（ダッシュボードモーダル）
+// 3. UIの描画（ダッシュボードモーダル）
 // ============================================================
 
 /**
  * FBA月間保管手数料の計算内訳からツールチップに表示するテキストを生成する
- * @param {Object} details - 保管料の内訳オブジェクト
- * @returns {string} ツールチップ用テキスト
  */
 function generateStorageFeeTooltipText(details) {
   if (!details) return "";
@@ -570,9 +80,6 @@ function generateStorageFeeTooltipText(details) {
 
 /**
  * 数値を3桁ごとにカンマ区切りでフォーマットする
- * 例: 12345 → "12,345"
- * @param {number|null} num - フォーマットする数値
- * @returns {string} フォーマットされた文字列
  */
 function formatNumber(num) {
   if (num === null || num === undefined) return "---";
@@ -582,20 +89,22 @@ function formatNumber(num) {
 /**
  * 消費税を除いた税抜価格を計算する
  * 食品・飲料の場合は8%軽減税率、その他は10%標準税率で逆算
- * @param {number} price - 税込価格
- * @param {string} categoryName - カテゴリ名
- * @returns {number} 税抜価格
  */
 function calculateTaxExcludedPrice(price, categoryName) {
   if (!price || price <= 0) return 0;
 
-  // 食品・飲料系カテゴリの判定キーワード
+  // 食品・飲料系カテゴリの判定キーワード（楽天・ヤフショ両方に対応）
   const isFoodOrBeverage = categoryName && 
     (categoryName.includes("食品") || 
      categoryName.includes("飲料") || 
      categoryName.includes("お酒") || 
+     categoryName.includes("水") || 
+     categoryName.includes("お茶") || 
+     categoryName.includes("ドリンク") || 
      categoryName.includes("Grocery") || 
-     categoryName.includes("食品・飲料・お酒"));
+     categoryName.includes("食品・飲料・お酒") ||
+     categoryName.includes("食品、ドリンク、お酒") ||
+     categoryName.includes("グルメ"));
   
   const taxRate = isFoodOrBeverage ? 0.08 : 0.10;
   return Math.floor(price / (1 + taxRate));
@@ -603,9 +112,6 @@ function calculateTaxExcludedPrice(price, categoryName) {
 
 /**
  * 出品ステータスのバッジHTMLを生成する
- * 申請が必要な場合は申請ページへのリンクボタンにする
- * @param {Object|null} amazonData - SP-APIから取得したAmazonデータ
- * @returns {string} バッジのHTML文字列
  */
 function getListingStatusBadge(amazonData) {
   if (!amazonData) return "";
@@ -629,43 +135,32 @@ function getListingStatusBadge(amazonData) {
 
 /**
  * ResearchDeckのダッシュボードUIを生成してページに挿入する
- * SP-API未設定時は楽天データのみ表示
- * SP-API設定済みの場合はAmazonセクション（利益・出品可否・販売数）も表示
- *
- * @param {Object} rakutenData - 楽天から抽出したデータ
- * @param {Object|null} amazonData - SP-APIから取得したデータ（nullの場合あり）
  */
-function renderDashboard(rakutenData, amazonData) {
-  // 既存のダッシュボードがあれば削除（再実行対策）
+function renderDashboard(shopData, amazonData) {
   const existing = document.getElementById("rd-dashboard");
   if (existing) existing.remove();
 
-  // ダッシュボード全体のコンテナを作成
   const dashboard = document.createElement("div");
   dashboard.id = "rd-dashboard";
 
-  // --- Amazonセクションの構築（SP-APIデータがある場合のみ） ---
+  // --- Amazonセクションの構築 ---
   let amazonSectionHtml = "";
 
   if (amazonData) {
-    // 利益計算
     const profitData = calculateProfit(
       amazonData.amazonPrice,
       amazonData.totalFees,
-      rakutenData.netCost
+      shopData.netCost
     );
 
-    // 利益額の色分け（黒字=グリーン、赤字=レッド）
     const profitClass = profitData.profit !== null
       ? (profitData.profit >= 0 ? "rd-profit-positive" : "rd-profit-negative")
       : "";
 
-    // 利益率の色分け
     const profitRateClass = profitData.profitRate !== null
       ? (profitData.profitRate >= 0 ? "rd-profit-positive" : "rd-profit-negative")
       : "";
 
-    // エラーメッセージ（APIからの価格取得エラーなども表示する）
     const amazonErrorHtml = (amazonData.error || amazonData.pricingError)
       ? `<div class="rd-alert rd-alert-info" style="margin-top: 8px; border-color: #f0ddb8; background-color: #fdf5e6; color: #8b6914;">
            <span class="rd-alert-icon">⚠️</span>
@@ -675,7 +170,6 @@ function renderDashboard(rakutenData, amazonData) {
          </div>`
       : "";
 
-    // 出品制限の理由（ある場合）
     const restrictionReasonsHtml = (amazonData.restrictionReasons && amazonData.restrictionReasons.length > 0)
       ? `<div class="rd-restriction-reasons" style="margin-top: 4px;">
            ${amazonData.restrictionReasons.map(r => `<span class="rd-restriction-reason">${r}</span>`).join("")}
@@ -683,7 +177,7 @@ function renderDashboard(rakutenData, amazonData) {
       : "";
 
     amazonSectionHtml = `
-      <!-- 出品ステータスセクション（コンパクト版、一番上に配置） -->
+      <!-- 出品ステータスセクション -->
       <div class="rd-section" style="margin-bottom: 12px;">
         <div class="rd-status-compact" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 6px;">
@@ -727,7 +221,7 @@ function renderDashboard(rakutenData, amazonData) {
           </div>
           <div class="rd-data-row">
             <span class="rd-data-label">実質仕入れ値</span>
-            <span class="rd-data-value rd-text-fee" id="rd-amazon-net-cost">-¥${formatNumber(rakutenData.netCost)}</span>
+            <span class="rd-data-value rd-text-fee" id="rd-amazon-net-cost">-¥${formatNumber(shopData.netCost)}</span>
           </div>
           <div class="rd-divider"></div>
           <div class="rd-data-row rd-highlight-row">
@@ -738,7 +232,6 @@ function renderDashboard(rakutenData, amazonData) {
             <span class="rd-data-label">利益率</span>
             <span class="rd-data-value ${profitRateClass}" id="rd-amazon-profit-rate">${profitData.profitRate !== null ? `${profitData.profitRate}%` : "---"}</span>
           </div>
-
         </div>
       </div>
 
@@ -779,7 +272,17 @@ function renderDashboard(rakutenData, amazonData) {
     `;
   }
 
-  // --- ダッシュボードのHTML構造 ---
+  // JAN/ASINの各種外部検索リンクURLを構築
+  const extSearchJan = shopData.janCode || '';
+  const searchButtonsHtml = extSearchJan ? `
+    <a href="https://search.rakuten.co.jp/search/mall/${extSearchJan}/" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-rakuten" title="楽天市場でJAN検索">楽天 ↗</a>
+    <a href="https://shopping.yahoo.co.jp/search?p=${extSearchJan}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-yahoo" title="Yahoo!ショッピングでJAN検索">ヤフ ↗</a>
+  ` : '';
+
+  // ドットの色（ショップごとに変更）
+  const shopDotClass = provider.dotClass;
+
+  // ダッシュボードのHTML構造
   dashboard.innerHTML = `
     <div class="rd-header">
       <div class="rd-logo">
@@ -798,15 +301,12 @@ function renderDashboard(rakutenData, amazonData) {
       <div class="rd-identifier-section">
         <div class="rd-identifier-row">
           <span class="rd-identifier-label">JAN</span>
-          <span class="rd-identifier-value" id="rd-copy-jan" title="クリックでコピー" data-copy="${rakutenData.janCode || ''}">
-            ${rakutenData.janCode || '<span style="color: #b44a3a; font-size: 9.5px; font-family: inherit; font-weight: 700; white-space: nowrap;" title="JANコードが見つかりませんでした。ページ読み込み完了後に、右上の更新ボタン（🔄）を押して再取得してください。">⚠️ 未検出 (🔄更新)</span>'}
-            ${rakutenData.janCode ? `<span class="rd-copy-icon">${COPY_ICON_SVG}</span>` : ''}
+          <span class="rd-identifier-value" id="rd-copy-jan" title="クリックでコピー" data-copy="${extSearchJan}">
+            ${extSearchJan || '<span style="color: #b44a3a; font-size: 9.5px; font-family: inherit; font-weight: 700; white-space: nowrap;" title="JANコードが見つかりませんでした。ページ読み込み完了後に、右上の更新ボタン（🔄）を押して再取得してください。">⚠️ 未検出 (🔄更新)</span>'}
+            ${extSearchJan ? `<span class="rd-copy-icon">${COPY_ICON_SVG}</span>` : ''}
           </span>
           <div class="rd-identifier-buttons">
-            ${rakutenData.janCode ? `
-              <a href="https://search.rakuten.co.jp/search/mall/${rakutenData.janCode}/" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-rakuten" title="楽天市場でJAN検索">楽天 ↗</a>
-              <a href="https://shopping.yahoo.co.jp/search?p=${rakutenData.janCode}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-yahoo" title="Yahoo!ショッピングでJAN検索">ヤフ ↗</a>
-            ` : ''}
+            ${searchButtonsHtml}
           </div>
         </div>
         <div class="rd-identifier-row">
@@ -824,44 +324,52 @@ function renderDashboard(rakutenData, amazonData) {
         </div>
       </div>
 
-      <!-- 楽天セクション -->
+      <!-- ショップセクション -->
       <div class="rd-section">
         <div class="rd-section-header">
-          <span class="rd-section-dot rd-dot-rakuten"></span>
-          <span class="rd-section-title">楽天市場</span>
+          <span class="rd-section-dot ${shopDotClass}"></span>
+          <span class="rd-section-title">${provider.siteName}</span>
         </div>
         <div class="rd-data-grid">
           <div class="rd-data-row">
             <span class="rd-data-label">価格（税込）</span>
-            <span class="rd-data-value" id="rd-rakuten-price">¥${formatNumber(rakutenData.price)}</span>
+            <span class="rd-data-value" id="rd-rakuten-price">¥${formatNumber(shopData.price)}</span>
           </div>
           <div class="rd-data-row">
-            <span class="rd-data-label">獲得ポイント</span>
-            <span class="rd-data-value rd-text-accent" id="rd-rakuten-points">${formatNumber(Math.abs(rakutenData.points))}pt</span>
+            <span class="rd-data-label">${provider.pointsName}</span>
+            <span class="rd-data-value rd-text-accent" id="rd-rakuten-points">${formatNumber(Math.abs(shopData.points))}pt</span>
           </div>
           <div class="rd-data-row" style="flex-wrap: wrap;">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-              <span class="rd-data-label">追加ポイント (%)</span>
+              <span class="rd-data-label">${provider.extraPointName} (%)</span>
               <span class="rd-data-value" style="display: flex; align-items: center; gap: 4px;">
-                <input type="number" id="rd-input-extra-point" min="0" max="100" step="1" value="${rakutenData.extraPointRate || 0}" class="rd-number-input" title="ポイント付与対象である「税抜価格」を基準に計算します" />
+                <div class="rd-spinner-container">
+                  <button class="rd-spinner-btn" id="rd-extra-point-minus" type="button">−</button>
+                  <input type="number" id="rd-input-extra-point" min="0" max="100" step="1" value="${shopData.extraPointRate || 0}" class="rd-number-input" title="ポイント付与対象である「税抜価格」を基準に計算します" />
+                  <button class="rd-spinner-btn" id="rd-extra-point-plus" type="button">+</button>
+                </div>
                 <span>%</span>
               </span>
             </div>
             <div style="width: 100%; text-align: right; margin-top: 2px;">
-              <span id="rd-tax-excluded-info" style="font-size: 10px; color: #b0aaa3;">(税抜価格 ¥${formatNumber(rakutenData.taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(rakutenData.extraPoints || 0))}</span>pt)</span>
+              <span id="rd-tax-excluded-info" style="font-size: 10px; color: #b0aaa3;">(税抜価格 ¥${formatNumber(shopData.taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(shopData.extraPoints || 0))}</span>pt)</span>
             </div>
           </div>
           <div class="rd-data-row">
             <span class="rd-data-label">クーポン (¥)</span>
             <span class="rd-data-value rd-text-accent" style="display: flex; align-items: center; gap: 4px;">
               <span>-¥</span>
-              <input type="number" id="rd-input-coupon" min="0" step="100" value="${rakutenData.coupon || 0}" class="rd-number-input" style="width: 70px;" title="クーポン割引金額を手動で調整できます" />
+              <div class="rd-spinner-container">
+                <button class="rd-spinner-btn" id="rd-coupon-minus" type="button">−</button>
+                <input type="number" id="rd-input-coupon" min="0" step="100" value="${shopData.coupon || 0}" class="rd-number-input" title="クーポン割引金額を手動で調整できます" />
+                <button class="rd-spinner-btn" id="rd-coupon-plus" type="button">+</button>
+              </div>
             </span>
           </div>
           <div class="rd-divider"></div>
           <div class="rd-data-row rd-highlight-row">
             <span class="rd-data-label rd-text-bold">実質仕入れ値</span>
-            <span class="rd-data-value rd-net-cost" id="rd-rakuten-net-cost">¥${formatNumber(rakutenData.netCost)}</span>
+            <span class="rd-data-value rd-net-cost" id="rd-rakuten-net-cost">¥${formatNumber(shopData.netCost)}</span>
           </div>
         </div>
       </div>
@@ -872,51 +380,48 @@ function renderDashboard(rakutenData, amazonData) {
 
   document.body.appendChild(dashboard);
 
-  // ローカルストレージから前回ドラッグしたダッシュボードの位置情報を復元する
+  // ドラッグ位置の復元
   const savedTop = localStorage.getItem("rd-dashboard-top");
   const savedLeft = localStorage.getItem("rd-dashboard-left");
   if (savedTop !== null && savedLeft !== null) {
     dashboard.style.top = savedTop;
     dashboard.style.left = savedLeft;
-    dashboard.style.right = "auto"; // CSSの right: 16px 指定を無効化して left指定を効かせる
+    dashboard.style.right = "auto";
   }
 
+  // 各種イベントリスナーの設定
   const refreshBtn = document.getElementById("rd-refresh-btn");
   if (refreshBtn) {
     refreshBtn.addEventListener("click", async () => {
-      // ボタンを一時的に無効化して連打を防ぐ
       refreshBtn.disabled = true;
       refreshBtn.classList.add("rd-disabled");
 
       try {
-        const newRakutenData = extractRakutenData();
-        const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
-        newRakutenData.extraPointRate = savedExtraRate;
+        const newShopData = provider.extractData();
+        newShopData.extraPointRate = provider.extraPointRateDefault;
         const pageTitle = document.title || "";
         const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
         const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-        const discountedPrice = Math.max(0, newRakutenData.price - newRakutenData.coupon);
-        newRakutenData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
+        const discountedPrice = Math.max(0, newShopData.price - newShopData.coupon);
+        newShopData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
         
-        // クーポン値引き後の基本ポイントを再計算
-        const discountedPoints = newRakutenData.price > 0 
-          ? Math.floor(newRakutenData.rawPoints * (discountedPrice / newRakutenData.price)) 
+        const discountedPoints = newShopData.price > 0 
+          ? Math.floor(newShopData.rawPoints * (discountedPrice / newShopData.price)) 
           : 0;
-        newRakutenData.points = discountedPoints;
+        newShopData.points = discountedPoints;
 
-        const extraPoints = Math.floor(newRakutenData.taxExcludedPrice * (savedExtraRate / 100));
-        newRakutenData.extraPoints = Math.abs(extraPoints);
-        newRakutenData.netCost = newRakutenData.price - discountedPoints - Math.abs(extraPoints) - newRakutenData.coupon;
+        const extraPoints = Math.floor(newShopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+        newShopData.extraPoints = Math.abs(extraPoints);
+        newShopData.netCost = newShopData.price - discountedPoints - Math.abs(extraPoints) - newShopData.coupon;
         
-        if (newRakutenData.janCode) {
-          await fetchAndRenderAmazonData(newRakutenData);
+        if (newShopData.janCode) {
+          await fetchAndRenderAmazonData(newShopData);
         } else {
-          renderDashboard(newRakutenData, null);
+          renderDashboard(newShopData, null);
         }
       } catch (err) {
         console.error("ResearchDeck: リフレッシュ中にエラーが発生しました -", err);
       } finally {
-        // 処理完了後に有効化に戻す
         refreshBtn.disabled = false;
         refreshBtn.classList.remove("rd-disabled");
       }
@@ -951,12 +456,11 @@ function renderDashboard(rakutenData, amazonData) {
   function updateCalculations() {
     const extraPointRate = parseInt(extraPointInput?.value || 0, 10);
     const couponValue = parseInt(couponInput?.value || 0, 10);
-    localStorage.setItem("rd-extra-point-rate", extraPointRate);
 
-    // クーポン値引き後の基本ポイントを動的に再計算して表示を更新
-    const discountedPrice = Math.max(0, rakutenData.price - couponValue);
-    const discountedPoints = rakutenData.price > 0 
-      ? Math.floor(rakutenData.rawPoints * (discountedPrice / rakutenData.price)) 
+
+    const discountedPrice = Math.max(0, shopData.price - couponValue);
+    const discountedPoints = shopData.price > 0 
+      ? Math.floor(shopData.rawPoints * (discountedPrice / shopData.price)) 
       : 0;
 
     const pointsDisplayEl = document.getElementById("rd-rakuten-points");
@@ -964,23 +468,21 @@ function renderDashboard(rakutenData, amazonData) {
       pointsDisplayEl.textContent = `${formatNumber(discountedPoints)}pt`;
     }
 
-    // クーポン値引き後の価格から税抜価格を動的に再計算する
     const categoryName = (currentAmazonData && currentAmazonData.categoryName) || "";
     const taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, categoryName);
-
     const extraPoints = Math.floor(taxExcludedPrice * (extraPointRate / 100));
 
-    // 税抜価格表示とシミュレーションポイント表示を更新
     const taxExcludedInfoEl = document.getElementById("rd-tax-excluded-info");
     if (taxExcludedInfoEl) {
       taxExcludedInfoEl.innerHTML = `(税抜価格 ¥${formatNumber(taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(extraPoints))}</span>pt)`;
     }
 
-    const netCost = rakutenData.price - discountedPoints - Math.abs(extraPoints) - couponValue;
-    const rakutenNetCostEl = document.getElementById("rd-rakuten-net-cost");
-    if (rakutenNetCostEl) rakutenNetCostEl.textContent = `¥${formatNumber(netCost)}`;
+    const netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - couponValue;
+    const shopNetCostEl = document.getElementById("rd-rakuten-net-cost");
+    if (shopNetCostEl) shopNetCostEl.textContent = `¥${formatNumber(netCost)}`;
     const amazonNetCostEl = document.getElementById("rd-amazon-net-cost");
     if (amazonNetCostEl) amazonNetCostEl.textContent = `-¥${formatNumber(netCost)}`;
+    
     if (amazonData && amazonData.amazonPrice) {
       const profitData = calculateProfit(amazonData.amazonPrice, amazonData.totalFees, netCost);
       const profitEl = document.getElementById("rd-amazon-profit");
@@ -994,6 +496,37 @@ function renderDashboard(rakutenData, amazonData) {
         profitRateEl.className = "rd-data-value " + (profitData.profitRate !== null ? (profitData.profitRate >= 0 ? "rd-profit-positive" : "rd-profit-negative") : "");
       }
     }
+  }
+
+  // カスタムスピンボタンのクリックイベントを設定
+  const extraMinus = document.getElementById("rd-extra-point-minus");
+  const extraPlus = document.getElementById("rd-extra-point-plus");
+  if (extraMinus && extraPlus && extraPointInput) {
+    extraMinus.addEventListener("click", () => {
+      const val = Math.max(0, parseInt(extraPointInput.value || 0, 10) - 1);
+      extraPointInput.value = val;
+      updateCalculations();
+    });
+    extraPlus.addEventListener("click", () => {
+      const val = Math.min(100, parseInt(extraPointInput.value || 0, 10) + 1);
+      extraPointInput.value = val;
+      updateCalculations();
+    });
+  }
+
+  const couponMinus = document.getElementById("rd-coupon-minus");
+  const couponPlus = document.getElementById("rd-coupon-plus");
+  if (couponMinus && couponPlus && couponInput) {
+    couponMinus.addEventListener("click", () => {
+      const val = Math.max(0, parseInt(couponInput.value || 0, 10) - 100);
+      couponInput.value = val;
+      updateCalculations();
+    });
+    couponPlus.addEventListener("click", () => {
+      const val = parseInt(couponInput.value || 0, 10) + 100;
+      couponInput.value = val;
+      updateCalculations();
+    });
   }
 
   if (extraPointInput) extraPointInput.addEventListener("input", updateCalculations);
@@ -1024,7 +557,6 @@ function makeElementDraggable(element, handle) {
     document.onmouseup = () => {
       document.onmouseup = null;
       document.onmousemove = null;
-      // ドラッグ終了時に、ダッシュボードの位置情報をローカルストレージに記憶する
       localStorage.setItem("rd-dashboard-top", element.style.top);
       localStorage.setItem("rd-dashboard-left", element.style.left);
     };
@@ -1052,121 +584,37 @@ function removeAmazonLoading() {
   if (loading) loading.remove();
 }
 
-function extractRakutenData(doc = document) {
-  let janCode = null;
-  let price = 0;
-  let points = 0;
-  let coupon = 0;
-
-  // --- 1. JSON-LD (構造化データ) からの抽出を最優先とする ---
-  const jsonLdData = extractFromJsonLd(doc);
-  if (jsonLdData) {
-    if (jsonLdData.jan) janCode = jsonLdData.jan;
-    if (jsonLdData.price) price = jsonLdData.price;
-  }
-
-  // --- 2. script#item-page-app-data (JSON) からの抽出を試みる ---
-  const appDataEl = doc.getElementById("item-page-app-data");
-  if (appDataEl) {
-    try {
-      const rootData = JSON.parse(appDataEl.textContent);
-      const item = (rootData.newApi && rootData.newApi.itemInfoSku) || (rootData.api && rootData.api.data && rootData.api.data.itemInfoSku);
-      if (item) {
-        // JANコードの特定
-        if (!janCode && item.sku && item.sku.length > 0) {
-          const firstJanSku = item.sku.find(s => s.articleNumber && s.articleNumber.value);
-          if (firstJanSku) {
-            janCode = firstJanSku.articleNumber.value;
-          }
-        }
-        // 価格の特定
-        if (price === 0 && item.sku && item.sku.length > 0) {
-          price = item.sku[0].taxIncludedPrice || 0;
-        }
-        
-        // ポイント倍率から獲得予定ポイントを概算
-        if (price > 0 && points === 0) {
-          let pointRate = 1;
-          if (item.newShopPoints && item.newShopPoints[0] && item.newShopPoints[0].all) {
-            pointRate = item.newShopPoints[0].all;
-          }
-          points = Math.floor(price * (pointRate / 100));
-        }
-      }
-    } catch (e) {
-      console.warn("ResearchDeck: item-page-app-dataのパースに失敗しました", e);
-    }
-  }
-
-  // --- 3. DOMからのフォールバック抽出 ---
-  if (!janCode) {
-    janCode = extractJanCode(doc);
-  }
-  
-  if (price === 0) {
-    price = extractPrice(doc);
-  }
-
-  // ポイントは「SPU等を含むユーザーの実際の保有ポイント」がDOMに表示されていればそれを優先
-  const domPoints = extractPoints(doc);
-  if (domPoints > 0) {
-    points = domPoints;
-  } else if (points === 0 && price > 0) {
-    // 最終フォールバックとして 1% を仮定
-    points = Math.floor(price * 0.01);
-  }
-
-  // クーポンもDOMから抽出（商品価格を渡して適用条件を判定できるようにする）
-  coupon = extractCoupon(doc, price);
-
-  // 獲得ポイント値のマイナスやプラス符号の混入を防ぐため、常に絶対値にする
-  const absolutePoints = Math.abs(points);
-
-  return {
-    janCode,
-    price,
-    points: absolutePoints,
-    rawPoints: absolutePoints, // クーポン値引き前の生のポイント
-    coupon,
-    netCost: price - absolutePoints - coupon
-  };
-}
-
 /**
  * SP-APIからAmazonデータを非同期で取得し、ダッシュボードを更新・再描画する
  */
-async function fetchAndRenderAmazonData(rakutenData) {
+async function fetchAndRenderAmazonData(shopData) {
   showAmazonLoading();
   try {
     const result = await chrome.runtime.sendMessage({
       type: "FETCH_AMAZON_DATA",
-      janCode: rakutenData.janCode,
+      janCode: shopData.janCode,
     });
     
     removeAmazonLoading();
     
     if (result && result.success && result.data) {
-      // 食品判定などの税率自動計算のため、税抜価格を再計算（クーポン値引き後）
-      const discountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
-      rakutenData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, result.data.categoryName);
+      const discountedPrice = Math.max(0, shopData.price - shopData.coupon);
+      shopData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, result.data.categoryName);
       
-      // クーポン値引き後の基本ポイントを再計算
-      const discountedPoints = rakutenData.price > 0 
-        ? Math.floor(rakutenData.rawPoints * (discountedPrice / rakutenData.price)) 
+      const discountedPoints = shopData.price > 0 
+        ? Math.floor(shopData.rawPoints * (discountedPrice / shopData.price)) 
         : 0;
-      rakutenData.points = discountedPoints; // 計算・表示用に上書き
+      shopData.points = discountedPoints; 
 
-      // 追加ポイント
-      const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
-      rakutenData.extraPointRate = savedExtraRate;
-      const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
-      rakutenData.extraPoints = Math.abs(extraPoints);
-      rakutenData.netCost = rakutenData.price - discountedPoints - Math.abs(extraPoints) - rakutenData.coupon;
+      shopData.extraPointRate = provider.extraPointRateDefault;
+      const extraPoints = Math.floor(shopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+      shopData.extraPoints = Math.abs(extraPoints);
+      shopData.netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - shopData.coupon;
       
       currentAmazonData = result.data;
-      renderDashboard(rakutenData, result.data);
+      renderDashboard(shopData, result.data);
     } else {
-      console.warn("ResearchDeck: Amazonデータの取得に失敗しました。楽天データのみで描画します。", result ? result.error : "");
+      console.warn("ResearchDeck: Amazonデータの取得に失敗しました。", result ? result.error : "");
       const errorData = {
         error: result ? result.error : "通信エラー",
         pricingError: result ? result.pricingError : null,
@@ -1183,7 +631,7 @@ async function fetchAndRenderAmazonData(rakutenData) {
         categoryName: null,
       };
       currentAmazonData = errorData;
-      renderDashboard(rakutenData, errorData);
+      renderDashboard(shopData, errorData);
     }
   } catch (err) {
     console.error("ResearchDeck: Amazonデータ取得中に例外が発生しました", err);
@@ -1203,7 +651,7 @@ async function fetchAndRenderAmazonData(rakutenData) {
       categoryName: null,
     };
     currentAmazonData = exceptionData;
-    renderDashboard(rakutenData, exceptionData);
+    renderDashboard(shopData, exceptionData);
   }
 }
 
@@ -1213,161 +661,131 @@ async function fetchAndRenderAmazonData(rakutenData) {
 async function initializeDetailPage() {
   console.log("ResearchDeck: 詳細ページの初期化を開始します...");
 
-  // --- ステップ1: 楽天ページからデータを抽出 ---
-  const rakutenData = extractRakutenData();
+  // プロバイダーからデータを抽出
+  const shopData = provider.extractData();
   
-  // 保存された追加ポイント倍率を復元して初期値として適用する
-  const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
-  rakutenData.extraPointRate = savedExtraRate;
+  shopData.extraPointRate = provider.extraPointRateDefault;
   
-  // クーポン値引き後の税込価格と基本ポイントを計算
-  const initialDiscountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
-  const initialDiscountedPoints = rakutenData.price > 0 
-    ? Math.floor(rakutenData.rawPoints * (initialDiscountedPrice / rakutenData.price)) 
+  const initialDiscountedPrice = Math.max(0, shopData.price - shopData.coupon);
+  const initialDiscountedPoints = shopData.price > 0 
+    ? Math.floor(shopData.rawPoints * (initialDiscountedPrice / shopData.price)) 
     : 0;
-  rakutenData.points = initialDiscountedPoints; // 計算・表示用に初期値を上書き
+  shopData.points = initialDiscountedPoints; 
 
-  // 税抜価格の計算（初期はカテゴリ名がわからないため、タイトルキーワードで簡易食品判定、かつクーポン値引き後をベースとする）
   const pageTitle = document.title || "";
   const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
   const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-  rakutenData.taxExcludedPrice = Math.floor(initialDiscountedPrice / (1 + initialTaxRate));
+  shopData.taxExcludedPrice = Math.floor(initialDiscountedPrice / (1 + initialTaxRate));
 
-  const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
-  // 常に絶対値で保持し、符号の混入を防止する
-  rakutenData.extraPoints = Math.abs(extraPoints);
-  rakutenData.netCost = rakutenData.price - initialDiscountedPoints - Math.abs(extraPoints) - rakutenData.coupon;
+  const extraPoints = Math.floor(shopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+  shopData.extraPoints = Math.abs(extraPoints);
+  shopData.netCost = shopData.price - initialDiscountedPoints - Math.abs(extraPoints) - shopData.coupon;
 
-  console.log("ResearchDeck: 抽出結果", rakutenData);
+  console.log("ResearchDeck: 抽出結果", shopData);
 
-  // 初期の自動取得値（クーポンなど）を記憶
-  currentAutoCoupon = rakutenData.coupon;
-  currentAutoExtraRate = savedExtraRate;
+  currentAutoCoupon = shopData.coupon;
+  currentAutoExtraRate = provider.extraPointRateDefault;
   currentAmazonData = null;
 
-  // --- ステップ2: まず楽天データのみでダッシュボードを表示 ---
-  renderDashboard(rakutenData, null);
+  // まずショップデータのみで描画
+  renderDashboard(shopData, null);
 
-  // --- ステップ3: JANコードが正しく取得されている場合は即座にデータ取得へ ---
-  if (rakutenData.janCode && isValidJanCode(rakutenData.janCode)) {
-    await fetchAndRenderAmazonData(rakutenData);
+  // JANコードがある場合はAmazonデータ取得へ
+  if (shopData.janCode && provider.isValidJanCode(shopData.janCode)) {
+    await fetchAndRenderAmazonData(shopData);
   } else {
-    console.log("ResearchDeck: 正しいJANコードが検出されませんでした。ページ読み込み完了後に手動更新ボタン（🔄）を押して再読み込みしてください。");
-    // 不正または未取得のJANは一旦クリアして描画する
-    rakutenData.janCode = null;
-    renderDashboard(rakutenData, null);
+    console.log("ResearchDeck: 正しいJANコードが検出されませんでした。");
+    shopData.janCode = null;
+    renderDashboard(shopData, null);
   }
 
-  // --- ステップ4: 非同期で遅れてロードされるクーポンやJANコードを救済する自動ポーリング ---
+  // 非同期読み込みのための自動ポーリング
   const pollIntervals = [1500, 3000, 5000, 10000];
   pollIntervals.forEach(delay => {
     setTimeout(async () => {
-      console.log(`ResearchDeck: バックグラウンド自動再スキャンを実行します (${delay}ms)...`);
-      const newData = extractRakutenData();
+      console.log(`ResearchDeck: 自動再スキャンを実行します (${delay}ms)...`);
+      const newData = provider.extractData();
       let updated = false;
 
-      // 1. クーポン更新の確認
       const couponInput = document.getElementById("rd-input-coupon");
-      const currentCouponVal = couponInput ? parseInt(couponInput.value || 0, 10) : rakutenData.coupon;
-      // ユーザーが手動編集していない（＝現在の入力値が前回自動取得した値と等しい）場合で、新しいクーポン値が異なる場合
+      const currentCouponVal = couponInput ? parseInt(couponInput.value || 0, 10) : shopData.coupon;
+
       if (newData.coupon !== currentAutoCoupon && currentCouponVal === currentAutoCoupon) {
         console.log(`ResearchDeck: クーポン値が更新されました: ${currentAutoCoupon} -> ${newData.coupon}`);
-        rakutenData.coupon = newData.coupon;
+        shopData.coupon = newData.coupon;
         currentAutoCoupon = newData.coupon;
         updated = true;
       }
 
-      // 2. JANコードの更新確認（初期ロードで取得できず、後からDOMにロードされた場合）
-      if (!rakutenData.janCode && newData.janCode && isValidJanCode(newData.janCode)) {
+      if (!shopData.janCode && newData.janCode && provider.isValidJanCode(newData.janCode)) {
         console.log(`ResearchDeck: JANコードが新しく検出されました: ${newData.janCode}`);
-        rakutenData.janCode = newData.janCode;
+        shopData.janCode = newData.janCode;
         updated = true;
       }
 
-      // 3. 価格の更新確認（初期値が0で、後からDOMにロードされた場合）
-      if (rakutenData.price === 0 && newData.price > 0) {
+      if (shopData.price === 0 && newData.price > 0) {
         console.log(`ResearchDeck: 価格が新しく検出されました: ${newData.price}`);
-        rakutenData.price = newData.price;
-        rakutenData.points = newData.points || Math.floor(newData.price * 0.01);
+        shopData.price = newData.price;
+        shopData.points = newData.points || Math.floor(newData.price * 0.01);
         
-        // 税抜価格を再計算
         const pageTitle = document.title || "";
         const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
         const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
-        const discountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
-        rakutenData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
+        const discountedPrice = Math.max(0, shopData.price - shopData.coupon);
+        shopData.taxExcludedPrice = Math.floor(discountedPrice / (1 + initialTaxRate));
         updated = true;
       }
 
-      // 4. 獲得予定ポイントの更新確認（非同期で遅れて楽天市場のポイントデータがロードされた場合）
-      if (newData.rawPoints !== rakutenData.rawPoints && newData.rawPoints > 0) {
-        console.log(`ResearchDeck: ポイント値が更新されました: ${rakutenData.rawPoints} -> ${newData.rawPoints}`);
-        rakutenData.rawPoints = newData.rawPoints;
+      if (newData.rawPoints !== shopData.rawPoints && newData.rawPoints > 0) {
+        console.log(`ResearchDeck: ポイント値が更新されました: ${shopData.rawPoints} -> ${newData.rawPoints}`);
+        shopData.rawPoints = newData.rawPoints;
         updated = true;
       }
 
       if (updated) {
-        // クーポン値引き等を反映させて税抜価格を再計算
         const categoryName = (currentAmazonData && currentAmazonData.categoryName) || "";
-        const discountedPrice = Math.max(0, rakutenData.price - rakutenData.coupon);
-        rakutenData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, categoryName);
+        const discountedPrice = Math.max(0, shopData.price - shopData.coupon);
+        shopData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, categoryName);
 
-        // クーポン値引き後の基本ポイントを再計算
-        const discountedPoints = rakutenData.price > 0 
-          ? Math.floor(rakutenData.rawPoints * (discountedPrice / rakutenData.price)) 
+        const discountedPoints = shopData.price > 0 
+          ? Math.floor(shopData.rawPoints * (discountedPrice / shopData.price)) 
           : 0;
-        rakutenData.points = discountedPoints;
+        shopData.points = discountedPoints;
 
-        // 追加ポイントと実質仕入れ値を再計算
-        const savedExtraRate = parseInt(localStorage.getItem("rd-extra-point-rate"), 10) || 0;
-        rakutenData.extraPointRate = savedExtraRate;
-        const extraPoints = Math.floor(rakutenData.taxExcludedPrice * (savedExtraRate / 100));
-        rakutenData.extraPoints = Math.abs(extraPoints);
-        rakutenData.netCost = rakutenData.price - discountedPoints - Math.abs(extraPoints) - rakutenData.coupon;
+        shopData.extraPointRate = provider.extraPointRateDefault;
+        const extraPoints = Math.floor(shopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+        shopData.extraPoints = Math.abs(extraPoints);
+        shopData.netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - shopData.coupon;
 
-        // JANコードが新しく取得できた場合はAmazonデータも取得し直すため、全体再描画を伴うfetchを実行
-        if (rakutenData.janCode && (!currentAmazonData || currentAmazonData.error)) {
-          await fetchAndRenderAmazonData(rakutenData);
+        if (shopData.janCode && (!currentAmazonData || currentAmazonData.error)) {
+          await fetchAndRenderAmazonData(shopData);
         } else {
-          // それ以外（価格、ポイント、クーポン等の更新）はダッシュボードを削除＆再作成せず、
-          // 該当要素をピンポイントで書き換え、inputイベントを発火させて裏側で計算処理を走らせる（カクつき・チラつきの完全防止）
+          // チラつき防止ピンポイント更新
           const couponInput = document.getElementById("rd-input-coupon");
           if (couponInput) {
-            // 1. クーポン入力欄の値を最新の取得値に更新
-            couponInput.value = rakutenData.coupon;
+            couponInput.value = shopData.coupon;
 
-            // 2. 価格表示の更新
             const priceEl = document.getElementById("rd-rakuten-price");
-            if (priceEl) {
-              priceEl.textContent = `¥${formatNumber(rakutenData.price)}`;
-            }
+            if (priceEl) priceEl.textContent = `¥${formatNumber(shopData.price)}`;
 
-            // 3. ポイント表示の更新
             const pointsEl = document.getElementById("rd-rakuten-points");
-            if (pointsEl) {
-              pointsEl.textContent = `${formatNumber(Math.abs(rakutenData.points))}pt`;
-            }
+            if (pointsEl) pointsEl.textContent = `${formatNumber(Math.abs(shopData.points))}pt`;
 
-            // 4. 税抜価格情報と追加ポイントシミュレーション表示の更新
             const taxExcludedInfoEl = document.getElementById("rd-tax-excluded-info");
             if (taxExcludedInfoEl) {
-              const currentExtraPoints = Math.floor(rakutenData.taxExcludedPrice * (rakutenData.extraPointRate / 100));
-              taxExcludedInfoEl.innerHTML = `(税抜価格 ¥${formatNumber(rakutenData.taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(currentExtraPoints))}</span>pt)`;
+              const currentExtraPoints = Math.floor(shopData.taxExcludedPrice * (shopData.extraPointRate / 100));
+              taxExcludedInfoEl.innerHTML = `(税抜価格 ¥${formatNumber(shopData.taxExcludedPrice)} に対して : <span id="rd-extra-points-display" style="color: #6b7f94; font-weight: 700;">${formatNumber(Math.abs(currentExtraPoints))}</span>pt)`;
             }
 
-            // 5. JANコードのコピー情報や表示の更新（JANが後から取得でき、かつAmazonデータ取得が不要な場合の対応）
             const janCopyEl = document.getElementById("rd-copy-jan");
-            if (janCopyEl && rakutenData.janCode && !janCopyEl.getAttribute("data-copy")) {
-              janCopyEl.setAttribute("data-copy", rakutenData.janCode);
-              janCopyEl.innerHTML = `${rakutenData.janCode} <span class="rd-copy-icon">${COPY_ICON_SVG}</span>`;
+            if (janCopyEl && shopData.janCode && !janCopyEl.getAttribute("data-copy")) {
+              janCopyEl.setAttribute("data-copy", shopData.janCode);
+              janCopyEl.innerHTML = `${shopData.janCode} <span class="rd-copy-icon">${COPY_ICON_SVG}</span>`;
             }
 
-            // 6. inputイベントを手動で発火させて、ダッシュボード内部の updateCalculations() を動かす
             couponInput.dispatchEvent(new Event("input"));
-            console.log(`ResearchDeck: カクつき防止用ピンポイントDOM更新を実行しました (coupon: ${rakutenData.coupon}, price: ${rakutenData.price})`);
           } else {
-            // ダッシュボードがまだ非表示や描画前などのイレギュラーケースは、安全のために再描画を実行
-            renderDashboard(rakutenData, currentAmazonData);
+            renderDashboard(shopData, currentAmazonData);
           }
         }
       }
@@ -1376,18 +794,20 @@ async function initializeDetailPage() {
 }
 
 // ============================================================
-// メイン実行処理（IIFE）
+// メイン実行処理
 // ============================================================
 (async () => {
   try {
+    initProvider();
+    
+    // 詳細ページ判定（ドメインが楽天またはヤフーショッピングのストアであること）
     const hostname = window.location.hostname;
-    // 詳細ページ (item.rakuten.co.jp) 以外では実行しないようにする
-    if (hostname !== "item.rakuten.co.jp") {
-      // 念のため、フォールバック要素（item-page-app-dataなど）がない場合は起動しない
-      if (!document.getElementById("item-page-app-data") && !document.querySelector(".item-price, .primary--2kjQA")) {
-        console.log("ResearchDeck: 商品詳細ページではないため起動をスキップします");
-        return;
-      }
+    const isRakutenDetail = hostname.includes("item.rakuten.co.jp");
+    const isYahooStoreDetail = hostname.includes("store.shopping.yahoo.co.jp");
+    
+    if (!isRakutenDetail && !isYahooStoreDetail) {
+      console.log("ResearchDeck: 対象のショップ詳細ページではないため起動をスキップします");
+      return;
     }
 
     await initializeDetailPage();
