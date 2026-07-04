@@ -846,6 +846,9 @@ async function initializeDetailPage() {
     const hostname = window.location.hostname;
     const isRakutenDetail = hostname.includes("item.rakuten.co.jp");
     
+    // 検証用のデバッグログを追加
+    console.log("DEBUG [ResearchDeck] hostname:", hostname, "isRakutenDetail:", isRakutenDetail);
+    
     let isYahooStoreDetail = hostname.includes("store.shopping.yahoo.co.jp");
     if (isYahooStoreDetail) {
       const path = window.location.pathname;
