@@ -59,7 +59,7 @@ class RakutenProvider extends BaseProvider {
           }
         }
       } catch (e) {
-        console.warn("ResearchDeck: item-page-app-dataのパースに失敗しました", e);
+        console.log("ResearchDeck: item-page-app-dataのパースに失敗しました", e);
       }
     }
 
@@ -101,6 +101,29 @@ class RakutenProvider extends BaseProvider {
    * 商品説明テーブル内やテキストからJANコードを抽出する
    */
   extractJanCode() {
+    // 楽天ビック (biccamera.rakuten.co.jp) の場合、URLのパスからJANコード (13桁または8桁の数値) を最優先で抽出
+    if (window.location.hostname.includes("biccamera.rakuten.co.jp")) {
+      const urlMatch = window.location.pathname.match(/\/item\/(\d{13}|\d{8})\b/);
+      if (urlMatch && this.isValidJanCode(urlMatch[1])) {
+        console.log(`ResearchDeck: 楽天ビックのURLからJANコードを検出しました -> ${urlMatch[1]}`);
+        return urlMatch[1];
+      }
+    }
+
+    // 隠しinput要素 (トラッキング用など) からの抽出フォールバック
+    const hiddenJanSelectors = [
+      'input#ratProductCode',
+      'input[name="rat"][id="ratProductCode"]',
+      'input#chatItemNumber'
+    ];
+    for (const selector of hiddenJanSelectors) {
+      const el = this.doc.querySelector(selector);
+      if (el && el.value && this.isValidJanCode(el.value.trim())) {
+        console.log(`ResearchDeck: 隠しinput (${selector}) からJANコードを検出しました -> ${el.value.trim()}`);
+        return el.value.trim();
+      }
+    }
+
     // 方法1: 商品説明テーブル内の「JAN」行を探す
     const tableRows = this.doc.querySelectorAll(
       "table tr, .item-description table tr, .rakutenLimitedId_ItemDescriptionInner table tr"
@@ -158,6 +181,16 @@ class RakutenProvider extends BaseProvider {
    * 楽天の価格表示から価格を抽出する
    */
   extractPrice() {
+    // 隠しinput要素 (トラッキング用など) からの価格抽出フォールバック
+    const ratPriceEl = this.doc.querySelector('input#ratPrice, input[name="rat"][id="ratPrice"]');
+    if (ratPriceEl && ratPriceEl.value) {
+      const num = parseInt(ratPriceEl.value.replace(/[^0-9]/g, ""), 10);
+      if (!isNaN(num) && num > 0) {
+        console.log(`ResearchDeck: 隠しinputから価格を検出しました -> ${num}`);
+        return num;
+      }
+    }
+
     const metaSelectors = [
       'meta[property="product:price:amount"]',
       'meta[itemprop="price"]',
@@ -215,10 +248,18 @@ class RakutenProvider extends BaseProvider {
   extractPoints() {
     const allElements = this.doc.getElementsByTagName("*");
     for (const el of allElements) {
+      // 共通コンポーネントエリア（ヘッダー、フッター、ナビ、メニュー、おすすめ広告等）をスキップして誤検知を防ぐ
+      if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+        continue;
+      }
       if (el.textContent && /^(内訳|ポイントの内訳)$/i.test(el.textContent.trim())) {
         let parent = el.parentElement;
         for (let depth = 0; depth < 3; depth++) {
           if (!parent) break;
+          // 親要素が共通コンポーネントエリアに含まれる場合もスキップ
+          if (parent.closest && parent.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+            break;
+          }
           const parentText = parent.textContent.replace(/[,、]/g, "");
           const match = parentText.match(/(\d+)\s*ポイント/);
           if (match) {
@@ -232,6 +273,7 @@ class RakutenProvider extends BaseProvider {
 
     const pointSelectors = [
       ".bdg-point-display", 
+      "#itemPoint", // 楽天ビックなどのVue/Nuxtバインド要素
       ".getPoint",
       ".point-firing",
       "[class*='point'] .important",
@@ -246,6 +288,10 @@ class RakutenProvider extends BaseProvider {
     for (const selector of pointSelectors) {
       const el = this.doc.querySelector(selector);
       if (el) {
+        // 共通コンポーネントエリアのスキップ
+        if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+          continue;
+        }
         const text = el.textContent.replace(/[,、]/g, "");
         const match = text.match(/(\d+)\s*ポイント/);
         if (match) return parseInt(match[1], 10);
@@ -262,6 +308,10 @@ class RakutenProvider extends BaseProvider {
       "[class*='point'], [class*='Point'], [class*='deal'], [class*='Deal']"
     );
     for (const el of candidateElements) {
+      // 共通コンポーネントエリアのスキップ
+      if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+        continue;
+      }
       if (el.children.length === 0 || (el.children.length === 1 && el.querySelector("span"))) {
         const text = el.textContent.replace(/[,、]/g, "").trim();
         const match = text.match(/^(\d+)\s*ポイント/);

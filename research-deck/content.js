@@ -18,7 +18,10 @@ let provider = null; // 現在のショッピングサイト用プロバイダ�
 // ============================================================
 function initProvider() {
   const hostname = window.location.hostname;
-  if (hostname.includes("rakuten.co.jp")) {
+  if (hostname.includes("biccamera.rakuten.co.jp")) {
+    provider = new RakutenProvider(document);
+    provider.siteName = "楽天ビック";
+  } else if (hostname.includes("rakuten.co.jp")) {
     provider = new RakutenProvider(document);
   } else if (hostname.includes("yahoo.co.jp")) {
     provider = new YahooProvider(document);
