@@ -403,6 +403,11 @@ function renderDashboard(shopData, amazonData) {
     dashboard.style.top = savedTop;
     dashboard.style.left = savedLeft;
     dashboard.style.right = "auto";
+    
+    // 描画直後は要素のサイズが確定していない可能性があるため、少し待ってから画面内へクランプする
+    setTimeout(() => {
+      keepElementInViewport(dashboard);
+    }, 50);
   }
 
   // 各種イベントリスナーの設定
@@ -586,24 +591,115 @@ function setupCopyClick(elementId) {
   });
 }
 
+/**
+ * ダッシュボードがビューポート（表示領域）内に収まるように位置を調整する
+ */
+function keepElementInViewport(element) {
+  if (!element) return;
+  
+  // style.left や style.top が適用されていない（初期位置）なら調整不要
+  if (!element.style.left && !element.style.top) return;
+
+  const rect = element.getBoundingClientRect();
+  const width = rect.width || 320;
+  const height = rect.height || 480;
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  let left = parseInt(element.style.left, 10) || 0;
+  let top = parseInt(element.style.top, 10) || 0;
+
+  // ズーム倍率の取得（bodyに追加されている場合、bodyのzoomの影響を受けるため）
+  let zoom = 1;
+  try {
+    const bodyStyle = window.getComputedStyle(document.body);
+    zoom = parseFloat(bodyStyle.zoom) || 1;
+  } catch (e) {}
+
+  const effectiveViewportWidth = viewportWidth / zoom;
+  const effectiveViewportHeight = viewportHeight / zoom;
+
+  const margin = 16;
+  
+  // 左右のクランプ
+  if (left < margin) {
+    left = margin;
+  } else if (left + width > effectiveViewportWidth - margin) {
+    left = Math.max(margin, effectiveViewportWidth - width - margin);
+  }
+
+  // 上下のクランプ
+  if (top < margin) {
+    top = margin;
+  } else if (top + height > effectiveViewportHeight - margin) {
+    top = Math.max(margin, effectiveViewportHeight - height - margin);
+  }
+
+  element.style.left = left + "px";
+  element.style.top = top + "px";
+  element.style.right = "auto";
+
+  localStorage.setItem("rd-dashboard-top", element.style.top);
+  localStorage.setItem("rd-dashboard-left", element.style.left);
+}
+
 function makeElementDraggable(element, handle) {
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
   handle.onmousedown = (e) => {
+    // インプット要素やボタンがクリックされた場合はドラッグしない
+    if (e.target.closest("button, input, select, textarea, a")) {
+      return;
+    }
     e.preventDefault();
     pos3 = e.clientX; pos4 = e.clientY;
+    
     document.onmouseup = () => {
       document.onmouseup = null;
       document.onmousemove = null;
-      localStorage.setItem("rd-dashboard-top", element.style.top);
-      localStorage.setItem("rd-dashboard-left", element.style.left);
+      keepElementInViewport(element);
     };
+    
     document.onmousemove = (e) => {
       pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
       pos3 = e.clientX; pos4 = e.clientY;
-      element.style.top = (element.offsetTop - pos2) + "px";
-      element.style.left = (element.offsetLeft - pos1) + "px";
+      
+      let nextTop = element.offsetTop - pos2;
+      let nextLeft = element.offsetLeft - pos1;
+      
+      // ドラッグ中も画面外にはみ出さないように制限
+      const rect = element.getBoundingClientRect();
+      const width = rect.width || 320;
+      const height = rect.height || 480;
+      
+      let zoom = 1;
+      try {
+        const bodyStyle = window.getComputedStyle(document.body);
+        zoom = parseFloat(bodyStyle.zoom) || 1;
+      } catch (e) {}
+      
+      const effectiveViewportWidth = window.innerWidth / zoom;
+      const effectiveViewportHeight = window.innerHeight / zoom;
+      
+      const margin = 8; // ドラッグ中は端に少し隠れるのを許容するためにマージンを小さく
+      // 完全に見失わないように最低でも40pxは画面内に残す
+      nextLeft = Math.max(margin - width + 40, Math.min(nextLeft, effectiveViewportWidth - margin - 40));
+      nextTop = Math.max(margin, Math.min(nextTop, effectiveViewportHeight - margin - 40));
+      
+      element.style.top = nextTop + "px";
+      element.style.left = nextLeft + "px";
+      element.style.right = "auto";
     };
   };
+  
+  // ヘッダーのダブルクリックで位置をリセット
+  handle.addEventListener("dblclick", () => {
+    localStorage.removeItem("rd-dashboard-top");
+    localStorage.removeItem("rd-dashboard-left");
+    element.style.top = "";
+    element.style.left = "";
+    element.style.right = "";
+  });
 }
 
 function showAmazonLoading() {
@@ -898,3 +994,11 @@ async function initializeDetailPage() {
     console.error("ResearchDeck: 予期しないエラーが発生しました -", err);
   }
 })();
+
+// ウィンドウサイズ変更時にダッシュボードが画面外に出ないようにする
+window.addEventListener("resize", () => {
+  const dashboard = document.getElementById("rd-dashboard");
+  if (dashboard && !dashboard.classList.contains("rd-hidden")) {
+    keepElementInViewport(dashboard);
+  }
+});
