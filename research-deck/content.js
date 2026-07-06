@@ -945,6 +945,17 @@ async function initializeDetailPage() {
     const hostname = window.location.hostname;
     const isRakutenDetail = hostname.includes("item.rakuten.co.jp");
     
+    // 楽天ブックスの詳細ページ判定
+    let isRakutenBooksDetail = hostname.includes("books.rakuten.co.jp");
+    if (isRakutenBooksDetail) {
+      const path = window.location.pathname;
+      // 楽天ブックスの商品詳細ページは通常 /rb/商品ID/ の構造
+      const isItemPage = /\/rb\/\d+\b/.test(path);
+      if (!isItemPage) {
+        isRakutenBooksDetail = false;
+      }
+    }
+    
     // 楽天ビックの詳細ページ判定
     let isRakutenBicDetail = hostname.includes("biccamera.rakuten.co.jp");
     if (isRakutenBicDetail) {
@@ -986,7 +997,7 @@ async function initializeDetailPage() {
       }
     }
     
-    if (!isRakutenDetail && !isRakutenBicDetail && !isYahooStoreDetail && !isLohacoDetail) {
+    if (!isRakutenDetail && !isRakutenBicDetail && !isRakutenBooksDetail && !isYahooStoreDetail && !isLohacoDetail) {
       console.log("ResearchDeck: 対象のショップ詳細ページではないため起動をスキップします");
       return;
     }
