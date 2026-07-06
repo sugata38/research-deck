@@ -381,6 +381,10 @@ class RakutenProvider extends BaseProvider {
       try {
         const elements = this.doc.querySelectorAll(selector);
         for (const el of elements) {
+          // 除外コンポーネント・キャンペーン枠はスキップ
+          if (el.closest && el.closest("header, footer, nav, menu, [class*='recommend' i], .benefitSection, .benefit-list")) {
+            continue;
+          }
           const text = el.textContent.replace(/[,、]/g, "");
           const minLimit = this.extractMinPurchaseLimit(text);
           if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) continue;
@@ -398,7 +402,8 @@ class RakutenProvider extends BaseProvider {
       const excludedSelectors = [
         "script", "style", "#commonHeader", "#commonFooter", 
         "#grHeader", "#grFooter", "#partsHeader", "#partsFooter",
-        ".shop-header", ".shopHeader"
+        ".shop-header", ".shopHeader", "header", "footer", "nav", "menu",
+        "[class*='recommend' i]", ".benefitSection", ".benefit-list"
       ];
       
       for (const sel of excludedSelectors) {
