@@ -86,6 +86,7 @@ class RakutenProvider extends BaseProvider {
 
     // 獲得ポイント値のマイナスやプラス符号の混入を防ぐため、常に絶対値にする
     const absolutePoints = Math.abs(points);
+    const pointRate = this.extractPointRate();
 
     return {
       janCode,
@@ -93,6 +94,7 @@ class RakutenProvider extends BaseProvider {
       points: absolutePoints,
       rawPoints: absolutePoints, // クーポン値引き前の生のポイント
       coupon,
+      pointRate,
       netCost: price - absolutePoints - coupon
     };
   }
@@ -468,5 +470,109 @@ class RakutenProvider extends BaseProvider {
     if (manYenMatch) return Math.floor(parseFloat(manYenMatch[1]) * 10000);
 
     return 0;
+  }
+
+  /**
+   * 楽天のポイント表示からポイント倍率を抽出する
+   */
+  extractPointRate() {
+    // 1. ポイント表示用セレクタから直接倍率を抽出
+    const pointSelectors = [
+      ".bdg-point-display", 
+      "#itemPoint",
+      ".getPoint",
+      ".point-firing",
+      "[class*='point'] .important",
+      "[class*='deal'] .important", 
+      ".rakutenLimitedId_PointEarning",
+      ".item-points",
+      "#getPoint",
+      ".spu-point",
+      ".point-total",
+    ];
+
+    for (const selector of pointSelectors) {
+      const el = this.doc.querySelector(selector);
+      if (el) {
+        if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+          continue;
+        }
+        const text = el.textContent.trim();
+        const match = text.match(/(\d+(?:\.\d+)?)\s*倍/);
+        if (match) {
+          const rate = parseFloat(match[1]);
+          if (rate > 0 && rate < 100) {
+            console.log(`ResearchDeck: セレクタからポイント倍率を検出しました -> ${rate}倍`);
+            return rate;
+          }
+        }
+      }
+    }
+
+    // 2. ページ全体の「ポイント」を含むテキストの周辺から倍率を探す
+    const allElements = this.doc.getElementsByTagName("*");
+    for (const el of allElements) {
+      if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+        continue;
+      }
+      if (el.children.length === 0 && el.textContent) {
+        const text = el.textContent.trim();
+        if (text.includes("ポイント") && text.includes("倍")) {
+          const match = text.match(/(\d+(?:\.\d+)?)\s*倍/);
+          if (match) {
+            const rate = parseFloat(match[1]);
+            if (rate > 0 && rate < 100) {
+              console.log(`ResearchDeck: 要素テキストからポイント倍率を検出しました -> ${rate}倍`);
+              return rate;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. 親要素を遡って探す
+    for (const el of allElements) {
+      if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+        continue;
+      }
+      if (el.textContent && /^(内訳|ポイントの内訳)$/i.test(el.textContent.trim())) {
+        let parent = el.parentElement;
+        for (let depth = 0; depth < 3; depth++) {
+          if (!parent) break;
+          if (parent.closest && parent.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+            break;
+          }
+          const parentText = parent.textContent;
+          const match = parentText.match(/(\d+(?:\.\d+)?)\s*倍/);
+          if (match) {
+            const rate = parseFloat(match[1]);
+            if (rate > 0 && rate < 100) {
+              console.log(`ResearchDeck: 親要素テキストからポイント倍率を検出しました -> ${rate}倍`);
+              return rate;
+            }
+          }
+          parent = parent.parentElement;
+        }
+      }
+    }
+
+    // 4. ページ全体からパターン検索
+    const bodyText = this.doc.body ? this.doc.body.textContent : "";
+    const ratePatterns = [
+      /獲得予定ポイント[^\n]*?(\d+(?:\.\d+)?)\s*倍/,
+      /(\d+(?:\.\d+)?)\s*倍\s*(?:内訳|[\(（])/
+    ];
+    for (const pattern of ratePatterns) {
+      const match = bodyText.match(pattern);
+      if (match) {
+        const rate = parseFloat(match[1]);
+        if (rate > 0 && rate < 100) {
+          console.log(`ResearchDeck: 正規表現パターンからポイント倍率を検出しました -> ${rate}倍`);
+          return rate;
+        }
+      }
+    }
+
+    return 1.0; // デフォルトは1倍
   }
 }
