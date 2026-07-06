@@ -385,7 +385,13 @@ class RakutenProvider extends BaseProvider {
           if (el.closest && el.closest("header, footer, nav, menu, [class*='recommend' i], .benefitSection, .benefit-list")) {
             continue;
           }
-          const text = el.textContent.replace(/[,、]/g, "");
+           const text = el.textContent.replace(/[,、]/g, "");
+          
+          // 未獲得のクーポンやキャンペーン広告の誤検知を防ぐ
+          if (text.includes("獲得") || text.includes("エントリー") || text.includes("条件") || text.includes("山分け") || text.includes("対象者限定") || text.includes("プレゼント")) {
+            continue;
+          }
+
           const minLimit = this.extractMinPurchaseLimit(text);
           if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) continue;
 
@@ -431,6 +437,11 @@ class RakutenProvider extends BaseProvider {
 
           const minLimit = this.extractMinPurchaseLimit(contextText);
           if (minLimit > 0 && currentPrice > 0 && currentPrice < minLimit) continue;
+
+          // 未獲得のクーポンやキャンペーン広告の誤検知を防ぐ
+          if (contextText.includes("獲得") || contextText.includes("エントリー") || contextText.includes("条件") || contextText.includes("山分け") || contextText.includes("対象者限定") || contextText.includes("プレゼント")) {
+            continue;
+          }
 
           couponValues.push(couponVal);
         }
