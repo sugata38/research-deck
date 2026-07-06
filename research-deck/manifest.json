@@ -8,6 +8,7 @@
       "matches": [
         "https://item.rakuten.co.jp/*",
         "https://biccamera.rakuten.co.jp/*",
+        "https://books.rakuten.co.jp/*",
         "https://store.shopping.yahoo.co.jp/*",
         "https://lohaco.yahoo.co.jp/*"
       ],

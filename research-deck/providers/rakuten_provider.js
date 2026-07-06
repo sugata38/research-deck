@@ -110,6 +110,25 @@ class RakutenProvider extends BaseProvider {
       }
     }
 
+    // 楽天ブックス (books.rakuten.co.jp) の場合、メタタグや専用要素からJANコード (ISBN) を最優先で抽出
+    if (window.location.hostname.includes("books.rakuten.co.jp")) {
+      const metaIsbn = this.doc.querySelector('meta[property="books:isbn"]');
+      if (metaIsbn && metaIsbn.getAttribute("content") && this.isValidJanCode(metaIsbn.getAttribute("content").trim())) {
+        console.log(`ResearchDeck: 楽天ブックスのmetaタグからJANコード (ISBN) を検出しました -> ${metaIsbn.getAttribute("content").trim()}`);
+        return metaIsbn.getAttribute("content").trim();
+      }
+      const dupAlert = this.doc.querySelector('div#duplicate-alert');
+      if (dupAlert && dupAlert.getAttribute("data-isbn-jan") && this.isValidJanCode(dupAlert.getAttribute("data-isbn-jan").trim())) {
+        console.log(`ResearchDeck: 楽天ブックスのduplicate-alertからJANコード (ISBN) を検出しました -> ${dupAlert.getAttribute("data-isbn-jan").trim()}`);
+        return dupAlert.getAttribute("data-isbn-jan").trim();
+      }
+      const booklog = this.doc.querySelector('div#booklogData');
+      if (booklog && booklog.getAttribute("data-isbn") && this.isValidJanCode(booklog.getAttribute("data-isbn").trim())) {
+        console.log(`ResearchDeck: 楽天ブックスのbooklogDataからJANコード (ISBN) を検出しました -> ${booklog.getAttribute("data-isbn").trim()}`);
+        return booklog.getAttribute("data-isbn").trim();
+      }
+    }
+
     // 隠しinput要素 (トラッキング用など) からの抽出フォールバック
     const hiddenJanSelectors = [
       'input#ratProductCode',
@@ -182,10 +201,11 @@ class RakutenProvider extends BaseProvider {
    */
   extractPrice() {
     // 隠しinput要素 (トラッキング用など) からの価格抽出フォールバック
-    const ratPriceEl = this.doc.querySelector('input#ratPrice, input[name="rat"][id="ratPrice"]');
+    const ratPriceEl = this.doc.querySelector('input#ratPrice, input[name="rat"][id="ratPrice"], input#ratItemPrice');
     if (ratPriceEl && ratPriceEl.value) {
-      const num = parseInt(ratPriceEl.value.replace(/[^0-9]/g, ""), 10);
-      if (!isNaN(num) && num > 0) {
+      const val = parseFloat(ratPriceEl.value);
+      if (!isNaN(val) && val > 0) {
+        const num = Math.floor(val);
         console.log(`ResearchDeck: 隠しinputから価格を検出しました -> ${num}`);
         return num;
       }
@@ -219,6 +239,7 @@ class RakutenProvider extends BaseProvider {
       ".rakutenLimitedId_ItemPrice",
       'span[itemprop="price"]',
       ".sale_price",
+      "input#ratItemPrice",
     ];
 
     for (const selector of priceSelectors) {

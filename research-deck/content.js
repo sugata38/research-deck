@@ -21,6 +21,9 @@ function initProvider() {
   if (hostname.includes("biccamera.rakuten.co.jp")) {
     provider = new RakutenProvider(document);
     provider.siteName = "楽天ビック";
+  } else if (hostname.includes("books.rakuten.co.jp")) {
+    provider = new RakutenProvider(document);
+    provider.siteName = "楽天ブックス";
   } else if (hostname.includes("rakuten.co.jp")) {
     provider = new RakutenProvider(document);
   } else if (hostname.includes("yahoo.co.jp")) {
