@@ -612,6 +612,21 @@ function renderDashboard(shopData, amazonData) {
     });
   }
 
+  const extraPointMinus = document.getElementById("rd-extra-point-minus");
+  const extraPointPlus = document.getElementById("rd-extra-point-plus");
+  if (extraPointMinus && extraPointPlus && extraPointInput) {
+    extraPointMinus.addEventListener("click", () => {
+      const val = Math.max(0, parseInt(extraPointInput.value || 0, 10) - 1);
+      extraPointInput.value = val;
+      updateCalculations();
+    });
+    extraPointPlus.addEventListener("click", () => {
+      const val = Math.min(100, parseInt(extraPointInput.value || 0, 10) + 1);
+      extraPointInput.value = val;
+      updateCalculations();
+    });
+  }
+
   if (pointRateInput) pointRateInput.addEventListener("input", updateCalculations);
   if (extraPointInput) extraPointInput.addEventListener("input", updateCalculations);
   if (couponInput) couponInput.addEventListener("input", updateCalculations);
