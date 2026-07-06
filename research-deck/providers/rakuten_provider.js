@@ -93,8 +93,7 @@ class RakutenProvider extends BaseProvider {
       points: absolutePoints,
       rawPoints: absolutePoints, // クーポン値引き前の生のポイント
       coupon,
-      netCost: price - absolutePoints - coupon,
-      couponDebug: this.couponDebug || "検出なし"
+      netCost: price - absolutePoints - coupon
     };
   }
 
@@ -363,7 +362,6 @@ class RakutenProvider extends BaseProvider {
    * 楽天のクーポン表示から金額を抽出する
    */
   extractCoupon(currentPrice = 0) {
-    this.couponDebug = "";
     const couponSelectors = [
       ".coupon-area",
       ".coupon",
@@ -384,7 +382,7 @@ class RakutenProvider extends BaseProvider {
         const elements = this.doc.querySelectorAll(selector);
         for (const el of elements) {
           // 除外コンポーネント・キャンペーン枠はスキップ
-          if (el.closest && el.closest("header, footer, nav, menu, [class*='recommend' i], .benefitSection, .benefit-list")) {
+          if (el.closest && el.closest("header, footer, nav, menu, [class*='recommend' i], .benefitSection, .benefit-list, [class*='header-books' i], [class*='footer-books' i], [class*='header-nav' i], [class*='footer-nav' i], .rb-sidebar, .aside, #react-related-slider, #react-related-rank, #recent-checked, #itemReview, .reviewSection")) {
             continue;
           }
            const text = el.textContent.replace(/[,、]/g, "");
@@ -399,9 +397,7 @@ class RakutenProvider extends BaseProvider {
 
           const matches = text.matchAll(/(\d+)\s*円\s*(?:OFF|off|オフ|引|クーポン|割引)/g);
           for (const match of matches) {
-            const val = parseInt(match[1], 10);
-            couponValues.push(val);
-            this.couponDebug = `[セレクタ: ${selector}] テキスト: "${text.trim().substring(0, 40)}"`;
+            couponValues.push(parseInt(match[1], 10));
           }
         }
       } catch (e) {}
@@ -413,7 +409,11 @@ class RakutenProvider extends BaseProvider {
         "script", "style", "#commonHeader", "#commonFooter", 
         "#grHeader", "#grFooter", "#partsHeader", "#partsFooter",
         ".shop-header", ".shopHeader", "header", "footer", "nav", "menu",
-        "[class*='recommend' i]", ".benefitSection", ".benefit-list"
+        "[class*='recommend' i]", ".benefitSection", ".benefit-list",
+        "[class*='header-books' i]", "[class*='footer-books' i]",
+        "[class*='header-nav' i]", "[class*='footer-nav' i]",
+        ".rb-sidebar", ".aside", "#react-related-slider", "#react-related-rank",
+        "#recent-checked", "#itemReview", ".reviewSection"
       ];
       
       for (const sel of excludedSelectors) {
@@ -448,7 +448,6 @@ class RakutenProvider extends BaseProvider {
           }
 
           couponValues.push(couponVal);
-          this.couponDebug = `[全体スキャン] パターン: ${pattern.toString()}, 周辺: "...${contextText.trim().replace(/\s+/g, ' ').substring(0, 60)}..."`;
         }
       }
     }

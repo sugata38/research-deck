@@ -367,7 +367,7 @@ function renderDashboard(shopData, amazonData) {
               <span>-¥</span>
               <div class="rd-spinner-container">
                 <button class="rd-spinner-btn" id="rd-coupon-minus" type="button">−</button>
-                <input type="number" id="rd-input-coupon" min="0" step="100" value="${shopData.coupon || 0}" class="rd-number-input" title="クーポン割引金額を手動で調整できます&#10;[デバッグ情報] 検出元: ${shopData.couponDebug || 'なし'}" />
+                <input type="number" id="rd-input-coupon" min="0" step="100" value="${shopData.coupon || 0}" class="rd-number-input" title="クーポン割引金額を手動で調整できます" />
                 <button class="rd-spinner-btn" id="rd-coupon-plus" type="button">+</button>
               </div>
             </span>
