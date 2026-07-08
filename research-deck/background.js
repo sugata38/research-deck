@@ -60,6 +60,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
     return true;
   }
+
+  // セルタナへの下書き保存リクエスト（Content Scriptから）
+  if (message.type === "SAVE_TO_SELLTANA") {
+    (async () => {
+      try {
+        const settings = await chrome.storage.local.get(["selltanaUrl", "selltanaApiKey"]);
+        const baseUrl = settings.selltanaUrl || "http://localhost:3000";
+        const apiKey = settings.selltanaApiKey || "";
+
+        const response = await fetch(`${baseUrl}/api/drafts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": apiKey,
+          },
+          body: JSON.stringify(message.payload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        sendResponse({ success: true, data: result });
+      } catch (error) {
+        console.error("ResearchDeck: セルタナへの保存に失敗:", error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true; // 非同期レスポンスのためチャネルを開いたままにする
+  }
 });
 
 // ============================================================

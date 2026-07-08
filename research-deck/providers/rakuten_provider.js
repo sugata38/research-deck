@@ -87,6 +87,7 @@ class RakutenProvider extends BaseProvider {
     // 獲得ポイント値のマイナスやプラス符号の混入を防ぐため、常に絶対値にする
     const absolutePoints = Math.abs(points);
     const pointRate = this.extractPointRate();
+    const extraPointRate = this.extractExtraPointRate();
 
     return {
       janCode,
@@ -95,6 +96,7 @@ class RakutenProvider extends BaseProvider {
       rawPoints: absolutePoints, // クーポン値引き前の生のポイント
       coupon,
       pointRate,
+      extraPointRate,
       netCost: price - absolutePoints - coupon
     };
   }
@@ -574,5 +576,81 @@ class RakutenProvider extends BaseProvider {
     }
 
     return 1.0; // デフォルトは1倍
+  }
+
+  /**
+   * 楽天スーパーDEALなどの追加ポイント還元率（%）を抽出するメソッド
+   * ページ内の特定のセレクタや全体のテキストから、%ポイントバックの表記をスキャンします。
+   */
+  extractExtraPointRate() {
+    // 1. 特徴的なクラス名を持つ要素から抽出を試みる
+    const dealSelectors = [
+      "[class*='deal']",
+      "[class*='Deal']",
+      "[class*='point']",
+      "[class*='Point']",
+      ".bdg-point-display",
+      "#itemPoint"
+    ];
+
+    for (const selector of dealSelectors) {
+      const elements = this.doc.querySelectorAll(selector);
+      for (const el of elements) {
+        // ヘッダーやフッター、おすすめ商品などの共通コンポーネントエリアは誤検出防止のためスキップ
+        if (el.closest && el.closest('header, footer, nav, menu, [class*="recommend" i]')) {
+          continue;
+        }
+        
+        // 子要素が少ない、またはテキストを直接含む要素をターゲットにする
+        if (el.children.length === 0 || (el.children.length === 1 && el.querySelector("span"))) {
+          const text = el.textContent.trim();
+          
+          // 「30%ポイントバック」などの表記を検出
+          const dealMatch = text.match(/(\d+)\s*%ポイントバック/);
+          if (dealMatch) {
+            const rate = parseInt(dealMatch[1], 10);
+            if (rate > 0 && rate <= 100) {
+              console.log(`ResearchDeck: 要素テキストからDEAL還元率を検出しました -> ${rate}%`);
+              return rate;
+            }
+          }
+          
+          // 「3.8倍+30%」などのプラス付き表記から追加パーセントを検出
+          const plusMatch = text.match(/倍\s*\+\s*(\d+)\s*%/);
+          if (plusMatch) {
+            const rate = parseInt(plusMatch[1], 10);
+            if (rate > 0 && rate <= 100) {
+              console.log(`ResearchDeck: 倍率プラス表記から追加還元率を検出しました -> ${rate}%`);
+              return rate;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. ページ全体のテキストから正規表現パターンで検索する
+    const bodyText = this.doc.body ? this.doc.body.textContent : "";
+    const extraPatterns = [
+      // 例: 3.8倍+30%ポイントバック などの表記から倍率と追加率を抽出
+      /(\d+(?:\.\d+)?)\s*倍\s*\+\s*(\d+)\s*%\s*(?:ポイントバック)?/, 
+      /スーパーDEAL\s*(\d+)\s*%\s*ポイントバック/i,
+      /スーパーDEAL[^\n]*?(\d+)\s*%/i,
+      /(\d+)\s*%\s*(?:ポイントバック|ポイント還元|還元)/
+    ];
+
+    for (const pattern of extraPatterns) {
+      const match = bodyText.match(pattern);
+      if (match) {
+        // 倍率+追加率のパターンの場合、2番目のグループ（追加率）を取得。それ以外は1番目のグループ。
+        const rateStr = pattern.source.includes("倍") && match[2] ? match[2] : match[1];
+        const rate = parseInt(rateStr, 10);
+        if (rate > 0 && rate <= 100) {
+          console.log(`ResearchDeck: 正規表現パターンから追加ポイント倍率を検出しました -> ${rate}%`);
+          return rate;
+        }
+      }
+    }
+
+    return 0; // デフォルトは0%
   }
 }

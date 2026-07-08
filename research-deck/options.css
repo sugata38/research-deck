@@ -234,3 +234,11 @@ body {
   font-size: 10px !important;
   color: #ccc7c0 !important;
 }
+
+/* --- 区切り線（セクション間） --- */
+.rd-options-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #3a3630, transparent);
+  margin: 32px 0;
+}

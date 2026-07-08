@@ -741,3 +741,37 @@ a.rd-badge:active {
   transform: translateY(0);
 }
 
+/* --- セルタナ連携ボタン --- */
+.rd-selltana-section {
+  padding: 8px 12px 12px;
+}
+
+.rd-selltana-save-btn {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4a90d9, #357abd);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+.rd-selltana-save-btn:hover {
+  background: linear-gradient(135deg, #357abd, #2a6aad);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 144, 217, 0.3);
+}
+.rd-selltana-save-btn:active { transform: translateY(0); }
+.rd-selltana-save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.rd-selltana-save-btn.rd-btn-success { background: linear-gradient(135deg, #4caf50, #388e3c); }
+.rd-selltana-save-btn.rd-btn-error { background: linear-gradient(135deg, #e53935, #c62828); }
+.rd-selltana-btn-icon { font-size: 15px; }
+.rd-selltana-btn-text { letter-spacing: 0.5px; }
+

@@ -41,6 +41,7 @@
     "https://api.amazon.com/*",
     "https://sellingpartnerapi-fe.amazon.com/*",
     "https://sellercentral.amazon.co.jp/*",
-    "https://store.shopping.yahoo.co.jp/*"
+    "https://store.shopping.yahoo.co.jp/*",
+    "http://localhost:3000/*"
   ]
 }

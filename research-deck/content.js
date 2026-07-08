@@ -435,6 +435,14 @@ function renderDashboard(shopData, amazonData) {
       </div>
 
       ${amazonSectionHtml}
+
+      <!-- セルタナ連携ボタン -->
+      <div class="rd-section rd-selltana-section">
+        <button class="rd-selltana-save-btn" id="rd-selltana-save-btn" type="button">
+          <span class="rd-selltana-btn-icon">◈</span>
+          <span class="rd-selltana-btn-text">セルタナに保存</span>
+        </button>
+      </div>
     </div>
   `;
 
@@ -463,7 +471,8 @@ function renderDashboard(shopData, amazonData) {
 
       try {
         const newShopData = provider.extractData();
-        newShopData.extraPointRate = provider.extraPointRateDefault;
+        // プロバイダーから取得した追加ポイント還元率（%）があればそれを優先し、なければデフォルト値を使用します
+        newShopData.extraPointRate = newShopData.extraPointRate !== undefined ? newShopData.extraPointRate : provider.extraPointRateDefault;
         const pageTitle = document.title || "";
         const isLikelyFood = /お茶|水|炭酸|飲料|食品|グルメ|スイーツ|ビール|酒/i.test(pageTitle);
         const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
@@ -473,7 +482,8 @@ function renderDashboard(shopData, amazonData) {
         const discountedPoints = calculateShopPoints(newShopData.price, newShopData.coupon, newShopData.rawPoints, newShopData.pointRate, "");
         newShopData.points = discountedPoints;
 
-        const extraPoints = Math.floor(newShopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+        // 抽出された追加ポイント還元率に基づいてポイント数を計算します
+        const extraPoints = Math.floor(newShopData.taxExcludedPrice * (newShopData.extraPointRate / 100));
         newShopData.extraPoints = Math.abs(extraPoints);
         newShopData.netCost = newShopData.price - discountedPoints - Math.abs(extraPoints) - newShopData.coupon;
         
@@ -564,6 +574,15 @@ function renderDashboard(shopData, amazonData) {
         profitRateEl.className = "rd-data-value " + (profitData.profitRate !== null ? (profitData.profitRate >= 0 ? "rd-profit-positive" : "rd-profit-negative") : "");
       }
     }
+
+    // shopDataオブジェクトを常に画面上の最新の値に同期する
+    shopData.points = discountedPoints;
+    shopData.extraPoints = extraPoints;
+    shopData.coupon = totalCouponValue;
+    shopData.netCost = netCost;
+    shopData.pointRate = pointRate;
+    shopData.extraPointRate = extraPointRate;
+    shopData.couponPercentRate = couponPercent;
   }
 
   // カスタムスピンボタンのクリックイベントを設定
@@ -631,6 +650,79 @@ function renderDashboard(shopData, amazonData) {
   if (extraPointInput) extraPointInput.addEventListener("input", updateCalculations);
   if (couponInput) couponInput.addEventListener("input", updateCalculations);
   if (couponPercentInput) couponPercentInput.addEventListener("input", updateCalculations);
+
+  // --- セルタナに保存ボタンのイベントリスナー ---
+  const selltanaSaveBtn = document.getElementById("rd-selltana-save-btn");
+  if (selltanaSaveBtn) {
+    selltanaSaveBtn.addEventListener("click", async () => {
+      // 送信中状態
+      selltanaSaveBtn.disabled = true;
+      const btnTextEl = selltanaSaveBtn.querySelector(".rd-selltana-btn-text");
+      const originalText = btnTextEl ? btnTextEl.textContent : "セルタナに保存";
+      if (btnTextEl) btnTextEl.textContent = "送信中...";
+
+      try {
+        // セルタナの設定を確認
+        const settings = await chrome.storage.local.get(["selltanaUrl", "selltanaApiKey"]);
+        if (!settings.selltanaUrl && !settings.selltanaApiKey) {
+          throw new Error("セルタナの接続設定が未設定です。拡張機能の設定ページから設定してください。");
+        }
+
+        // ペイロードの構築
+        const payload = {
+          product: {
+            name: document.title.split(' - ')[0].split('|')[0].trim() || '未設定',
+            asin: currentAmazonData?.asin || null,
+            janCode: shopData.janCode || null,
+            category: currentAmazonData?.categoryName || null,
+            imageUrl: currentAmazonData?.imageUrl || null,
+          },
+          listing: {
+            currentPrice: currentAmazonData?.amazonPrice || null,
+            feeCategory: currentAmazonData?.categoryName || null,
+            feeRate: currentAmazonData?.referralFeeRate || null,
+            fbaFee: currentAmazonData?.fbaFulfillmentFee || null,
+            fulfillmentChannel: 'FBA',
+            condition: 'New',
+          },
+          purchase: {
+            costPrice: shopData.price || 0,
+            pointsEarned: Math.abs(shopData.points || 0) + Math.abs(shopData.extraPoints || 0),
+            couponDiscount: Math.abs(shopData.coupon || 0),
+            purchaseSource: provider.siteName.includes('楽天') ? 'rakuten' : (provider.siteName.includes('Yahoo') || provider.siteName.includes('LOHACO') ? 'yahoo' : 'other'),
+            sourceUrl: window.location.href,
+            quantity: 1,
+            memo: null,
+          }
+        };
+
+        // backgroundに送信
+        const result = await chrome.runtime.sendMessage({ type: 'SAVE_TO_SELLTANA', payload });
+
+        if (result && result.success) {
+          // 成功
+          if (btnTextEl) btnTextEl.textContent = "✅ 保存しました";
+          selltanaSaveBtn.classList.add("rd-btn-success");
+          setTimeout(() => {
+            if (btnTextEl) btnTextEl.textContent = originalText;
+            selltanaSaveBtn.classList.remove("rd-btn-success");
+            selltanaSaveBtn.disabled = false;
+          }, 2000);
+        } else {
+          throw new Error(result?.error || "不明なエラー");
+        }
+      } catch (error) {
+        console.error("ResearchDeck: セルタナ保存エラー:", error);
+        if (btnTextEl) btnTextEl.textContent = "❌ 保存に失敗";
+        selltanaSaveBtn.classList.add("rd-btn-error");
+        setTimeout(() => {
+          if (btnTextEl) btnTextEl.textContent = originalText;
+          selltanaSaveBtn.classList.remove("rd-btn-error");
+          selltanaSaveBtn.disabled = false;
+        }, 3000);
+      }
+    });
+  }
 }
 
 function setupCopyClick(elementId) {
@@ -795,8 +887,8 @@ async function fetchAndRenderAmazonData(shopData) {
       const discountedPoints = calculateShopPoints(shopData.price, shopData.coupon, shopData.rawPoints, shopData.pointRate, result.data.categoryName);
       shopData.points = discountedPoints; 
 
-      shopData.extraPointRate = provider.extraPointRateDefault;
-      const extraPoints = Math.floor(shopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+      shopData.extraPointRate = shopData.extraPointRate !== undefined ? shopData.extraPointRate : provider.extraPointRateDefault;
+      const extraPoints = Math.floor(shopData.taxExcludedPrice * (shopData.extraPointRate / 100));
       shopData.extraPoints = Math.abs(extraPoints);
       shopData.netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - shopData.coupon;
       
@@ -853,7 +945,7 @@ async function initializeDetailPage() {
   // プロバイダーからデータを抽出
   const shopData = provider.extractData();
   
-  shopData.extraPointRate = provider.extraPointRateDefault;
+  shopData.extraPointRate = shopData.extraPointRate !== undefined ? shopData.extraPointRate : provider.extraPointRateDefault;
   shopData.couponPercentRate = 0;
   
   const initialDiscountedPrice = Math.max(0, shopData.price - shopData.coupon);
@@ -865,14 +957,14 @@ async function initializeDetailPage() {
   const initialTaxRate = isLikelyFood ? 0.08 : 0.10;
   shopData.taxExcludedPrice = Math.floor(initialDiscountedPrice / (1 + initialTaxRate));
 
-  const extraPoints = Math.floor(shopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+  const extraPoints = Math.floor(shopData.taxExcludedPrice * (shopData.extraPointRate / 100));
   shopData.extraPoints = Math.abs(extraPoints);
   shopData.netCost = shopData.price - initialDiscountedPoints - Math.abs(extraPoints) - shopData.coupon;
 
   console.log("ResearchDeck: 抽出結果", shopData);
 
   currentAutoCoupon = shopData.coupon;
-  currentAutoExtraRate = provider.extraPointRateDefault;
+  currentAutoExtraRate = shopData.extraPointRate;
   currentAutoPointRate = shopData.pointRate || 1.0;
   currentAmazonData = null;
 
@@ -902,6 +994,9 @@ async function initializeDetailPage() {
       const pointRateInput = document.getElementById("rd-input-point-rate");
       const currentPointRateVal = pointRateInput ? parseFloat(pointRateInput.value || 1.0) : shopData.pointRate;
 
+      const extraPointInput = document.getElementById("rd-input-extra-point");
+      const currentExtraPointRateVal = extraPointInput ? parseInt(extraPointInput.value || 0, 10) : shopData.extraPointRate;
+
       if (newData.coupon !== currentAutoCoupon && currentCouponVal === currentAutoCoupon) {
         console.log(`ResearchDeck: クーポン値が更新されました: ${currentAutoCoupon} -> ${newData.coupon}`);
         shopData.coupon = newData.coupon;
@@ -913,6 +1008,13 @@ async function initializeDetailPage() {
         console.log(`ResearchDeck: ポイント倍率が更新されました: ${currentAutoPointRate}倍 -> ${newData.pointRate}倍`);
         shopData.pointRate = newData.pointRate;
         currentAutoPointRate = newData.pointRate;
+        updated = true;
+      }
+
+      if (newData.extraPointRate !== undefined && newData.extraPointRate !== currentAutoExtraRate && currentExtraPointRateVal === currentAutoExtraRate) {
+        console.log(`ResearchDeck: 追加ポイント率が更新されました: ${currentAutoExtraRate}% -> ${newData.extraPointRate}%`);
+        shopData.extraPointRate = newData.extraPointRate;
+        currentAutoExtraRate = newData.extraPointRate;
         updated = true;
       }
 
@@ -949,8 +1051,8 @@ async function initializeDetailPage() {
         const discountedPoints = calculateShopPoints(shopData.price, shopData.coupon, shopData.rawPoints, shopData.pointRate, categoryName);
         shopData.points = discountedPoints;
 
-        shopData.extraPointRate = provider.extraPointRateDefault;
-        const extraPoints = Math.floor(shopData.taxExcludedPrice * (provider.extraPointRateDefault / 100));
+        shopData.extraPointRate = shopData.extraPointRate !== undefined ? shopData.extraPointRate : provider.extraPointRateDefault;
+        const extraPoints = Math.floor(shopData.taxExcludedPrice * (shopData.extraPointRate / 100));
         shopData.extraPoints = Math.abs(extraPoints);
         shopData.netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - shopData.coupon;
 
@@ -961,6 +1063,7 @@ async function initializeDetailPage() {
           const couponInput = document.getElementById("rd-input-coupon");
           const couponPercentInput = document.getElementById("rd-input-coupon-percent");
           const pointRateInput = document.getElementById("rd-input-point-rate");
+          const extraPointInput = document.getElementById("rd-input-extra-point");
           if (couponInput) {
             couponInput.value = shopData.coupon;
             if (couponPercentInput) {
@@ -968,6 +1071,9 @@ async function initializeDetailPage() {
             }
             if (pointRateInput) {
               pointRateInput.value = shopData.pointRate || 1.0;
+            }
+            if (extraPointInput) {
+              extraPointInput.value = shopData.extraPointRate || 0;
             }
 
             const priceEl = document.getElementById("rd-rakuten-price");

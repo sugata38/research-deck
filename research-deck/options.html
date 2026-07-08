@@ -85,6 +85,56 @@
     <!-- ステータスメッセージ -->
     <div id="rd-status" class="rd-status" hidden></div>
 
+    <!-- セルタナ連携設定 -->
+    <div class="rd-options-divider"></div>
+
+    <div class="rd-options-header" style="margin-top: 0;">
+      <span class="rd-options-logo-icon">◈</span>
+      <h1 class="rd-options-title">Selltana 連携</h1>
+      <p class="rd-options-subtitle">セルタナ連携設定</p>
+    </div>
+
+    <div class="rd-options-info">
+      <p>セルタナ（Selltana）との連携設定です。<br>
+      セルタナのシステム設定画面で発行したAPIキーと、セルタナのURLを入力してください。</p>
+    </div>
+
+    <form id="rd-selltana-form" class="rd-options-form">
+      <div class="rd-form-group">
+        <label for="rd-selltana-url" class="rd-form-label">セルタナURL</label>
+        <input
+          type="url"
+          id="rd-selltana-url"
+          class="rd-form-input"
+          placeholder="http://localhost:3000"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="rd-form-hint">セルタナが動作しているサーバーのURLを入力（デフォルト: http://localhost:3000）</span>
+      </div>
+
+      <div class="rd-form-group">
+        <label for="rd-selltana-api-key" class="rd-form-label">APIキー</label>
+        <input
+          type="password"
+          id="rd-selltana-api-key"
+          class="rd-form-input"
+          placeholder="your-api-key-here"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="rd-form-hint">セルタナのシステム設定 → 外部連携APIキーで確認できます</span>
+      </div>
+
+      <div class="rd-form-actions">
+        <button type="submit" id="rd-selltana-save-btn" class="rd-btn rd-btn-primary">保存する</button>
+        <button type="button" id="rd-selltana-test-btn" class="rd-btn rd-btn-secondary">接続テスト</button>
+      </div>
+    </form>
+
+    <!-- セルタナステータスメッセージ -->
+    <div id="rd-selltana-status" class="rd-status" hidden></div>
+
     <!-- フッター -->
     <div class="rd-options-footer">
       <p>ResearchDeck <span id="rd-version">v1.0.0</span> — 個人利用専用ツール</p>

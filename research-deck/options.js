@@ -13,6 +13,14 @@ const saveBtn = document.getElementById("rd-save-btn");
 const testBtn = document.getElementById("rd-test-btn");
 const statusDiv = document.getElementById("rd-status");
 
+// --- セルタナ連携用のDOM要素 ---
+const selltanaForm = document.getElementById("rd-selltana-form");
+const selltanaUrlInput = document.getElementById("rd-selltana-url");
+const selltanaApiKeyInput = document.getElementById("rd-selltana-api-key");
+const selltanaSaveBtn = document.getElementById("rd-selltana-save-btn");
+const selltanaTestBtn = document.getElementById("rd-selltana-test-btn");
+const selltanaStatusDiv = document.getElementById("rd-selltana-status");
+
 // ============================================================
 // ページ読み込み時に保存済みの設定を復元
 // ============================================================
@@ -24,6 +32,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       "sp_client_secret",
       "sp_refresh_token",
       "sp_seller_id",
+      "selltanaUrl",
+      "selltanaApiKey",
     ]);
 
     // 保存済みの値をフォームに反映
@@ -31,6 +41,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (data.sp_client_secret) clientSecretInput.value = data.sp_client_secret;
     if (data.sp_refresh_token) refreshTokenInput.value = data.sp_refresh_token;
     if (data.sp_seller_id) sellerIdInput.value = data.sp_seller_id;
+
+    // セルタナ連携設定の復元
+    if (data.selltanaUrl) selltanaUrlInput.value = data.selltanaUrl;
+    if (data.selltanaApiKey) selltanaApiKeyInput.value = data.selltanaApiKey;
 
     // 設定ファイル（manifest.json）のバージョンをフッターに自動反映
     const manifestData = chrome.runtime.getManifest();
@@ -159,3 +173,92 @@ function showStatus(message, type) {
     }, 5000);
   }
 }
+
+// ============================================================
+// セルタナ連携設定の保存
+// ============================================================
+
+/**
+ * セルタナ用ステータスメッセージを表示する
+ *
+ * @param {string} message - 表示するメッセージ
+ * @param {string} type - メッセージの種類（"success" | "error" | "info"）
+ */
+function showSelltanaStatus(message, type) {
+  selltanaStatusDiv.textContent = message;
+  selltanaStatusDiv.hidden = false;
+  selltanaStatusDiv.className = `rd-status rd-status-${type}`;
+
+  if (type === "success") {
+    setTimeout(() => {
+      selltanaStatusDiv.hidden = true;
+    }, 5000);
+  }
+}
+
+selltanaForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const selltanaUrl = selltanaUrlInput.value.trim();
+  const selltanaApiKey = selltanaApiKeyInput.value.trim();
+
+  // 保存ボタンを無効化（二重送信防止）
+  selltanaSaveBtn.disabled = true;
+  selltanaSaveBtn.textContent = "保存中...";
+
+  try {
+    await chrome.storage.local.set({
+      selltanaUrl: selltanaUrl || "http://localhost:3000",
+      selltanaApiKey: selltanaApiKey,
+    });
+
+    showSelltanaStatus("✅ セルタナ連携設定を保存しました。", "success");
+  } catch (err) {
+    showSelltanaStatus(`❌ セルタナ設定の保存に失敗しました: ${err.message}`, "error");
+  } finally {
+    selltanaSaveBtn.disabled = false;
+    selltanaSaveBtn.textContent = "保存する";
+  }
+});
+
+// ============================================================
+// セルタナ接続テスト
+// ============================================================
+
+selltanaTestBtn.addEventListener("click", async () => {
+  const selltanaUrl = selltanaUrlInput.value.trim() || "http://localhost:3000";
+  const selltanaApiKey = selltanaApiKeyInput.value.trim();
+
+  // テストボタンを無効化
+  selltanaTestBtn.disabled = true;
+  selltanaTestBtn.textContent = "テスト中...";
+  showSelltanaStatus("🔄 セルタナへの接続をテストしています...", "info");
+
+  try {
+    // まず現在の入力値を保存
+    await chrome.storage.local.set({
+      selltanaUrl: selltanaUrl,
+      selltanaApiKey: selltanaApiKey,
+    });
+
+    // GETリクエストで接続テスト
+    const response = await fetch(`${selltanaUrl}/api/drafts`, {
+      method: "GET",
+      headers: {
+        "X-API-Key": selltanaApiKey,
+      },
+    });
+
+    if (response.ok) {
+      showSelltanaStatus("✅ セルタナへの接続に成功しました！", "success");
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      showSelltanaStatus(`❌ 接続テスト失敗: ${errorData.error || `HTTP ${response.status}`}`, "error");
+    }
+  } catch (err) {
+    showSelltanaStatus(`❌ セルタナへの接続に失敗しました: ${err.message}`, "error");
+  } finally {
+    selltanaTestBtn.disabled = false;
+    selltanaTestBtn.textContent = "接続テスト";
+  }
+});
