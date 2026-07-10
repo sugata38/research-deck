@@ -239,6 +239,7 @@ async function handleFetchAmazonData(janCode) {
       // 価格・手数料
       amazonPrice,
       referralFee: referralFeeTaxed,
+      referralFeeRate: amazonPrice > 0 ? (feesData.referralFee / amazonPrice) : 0.15,
       fbaFulfillmentFee: fbaFulfillmentFee,
       monthlyStorageFee: monthlyStorageFeeVal, // 月間保管手数料（個別の値、税込）
       monthlyStorageFeeDetails, // 保管手数料の計算内訳
