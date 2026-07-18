@@ -641,9 +641,17 @@ a.rd-badge:active {
   margin: 0 !important;
 }
 
-/* クーポン用の幅調整 */
+/* クーポン用および仕入れ値用の幅調整 */
 #rd-dashboard .rd-spinner-container #rd-input-coupon {
   width: 48px !important;
+}
+
+#rd-dashboard .rd-spinner-container #rd-input-purchase-price {
+  width: 65px !important;
+}
+
+#rd-dashboard .rd-spinner-container #rd-input-point-rate {
+  width: 42px !important;
 }
 
 .rd-spinner-btn {

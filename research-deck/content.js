@@ -29,6 +29,8 @@ function initProvider() {
     provider = new RakutenProvider(document);
   } else if (hostname.includes("yahoo.co.jp")) {
     provider = new YahooProvider(document);
+  } else if (hostname.includes("amazon.co.jp")) {
+    provider = new AmazonProvider(document);
   } else {
     // 予期しないサイト用のフォールバック（item-page-app-dataがあるかで楽天と判定）
     if (document.getElementById("item-page-app-data") || document.querySelector(".item-price, .primary--2kjQA")) {
@@ -305,57 +307,89 @@ function renderDashboard(shopData, amazonData) {
   }
 
   // JAN/ASINの各種外部検索リンクURLを構築
-  const extSearchJan = shopData.janCode || '';
-  const searchButtonsHtml = extSearchJan ? `
-    <a href="https://search.rakuten.co.jp/search/mall/${extSearchJan}/" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-rakuten" title="楽天市場でJAN検索">楽天 ↗</a>
-    <a href="https://shopping.yahoo.co.jp/search?p=${extSearchJan}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-yahoo" title="Yahoo!ショッピングでJAN検索">ヤフ ↗</a>
-  ` : '';
+  let extSearchJan = shopData.janCode || '';
+  let searchButtonsHtml = '';
+  if (extSearchJan) {
+    searchButtonsHtml = `
+      <a href="https://search.rakuten.co.jp/search/mall/${extSearchJan}/" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-rakuten" title="楽天市場でJAN検索">楽天 ↗</a>
+      <a href="https://shopping.yahoo.co.jp/search?p=${extSearchJan}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-yahoo" title="Yahoo!ショッピングでJAN検索">ヤフ ↗</a>
+    `;
+  } else {
+    const rawTitle = (amazonData && amazonData.title) || document.title || "";
+    const cleanTitle = rawTitle
+      .replace(/[【】\[\]（）()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const searchKeyword = encodeURIComponent(cleanTitle.substring(0, 40));
+    if (searchKeyword) {
+      searchButtonsHtml = `
+        <a href="https://search.rakuten.co.jp/search/mall/${searchKeyword}/" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-rakuten" title="楽天市場でキーワード検索">楽天 ↗</a>
+        <a href="https://shopping.yahoo.co.jp/search?p=${searchKeyword}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-yahoo" title="Yahoo!ショッピングでキーワード検索">ヤフ ↗</a>
+      `;
+    }
+  }
 
   // ドットの色（ショップごとに変更）
   const shopDotClass = provider.dotClass;
 
-  // ダッシュボードのHTML構造
-  dashboard.innerHTML = `
-    <div class="rd-header">
-      <div class="rd-logo">
-        <span class="rd-logo-icon">◈</span>
-        <span class="rd-logo-text">ResearchDeck</span>
-      </div>
-      <div class="rd-header-actions">
-        <button class="rd-icon-btn" id="rd-refresh-btn" title="最新情報に更新（JAN未取得時の再読み込み）">🔄</button>
-        <button class="rd-icon-btn" id="rd-settings-btn" title="設定を開く">⚙️</button>
-        <button class="rd-close" id="rd-close-btn" aria-label="閉じる">×</button>
-      </div>
-    </div>
-
-    <div class="rd-body">
-      <!-- 識別子セクション（JAN / ASIN） -->
-      <div class="rd-identifier-section">
-        <div class="rd-identifier-row">
-          <span class="rd-identifier-label">JAN</span>
-          <span class="rd-identifier-value" id="rd-copy-jan" title="クリックでコピー" data-copy="${extSearchJan}">
-            ${extSearchJan || '<span style="color: #b44a3a; font-size: 9.5px; font-family: inherit; font-weight: 700; white-space: nowrap;" title="JANコードが見つかりませんでした。ページ読み込み完了後に、右上の更新ボタン（🔄）を押して再取得してください。">⚠️ 未検出 (🔄更新)</span>'}
-            ${extSearchJan ? `<span class="rd-copy-icon">${COPY_ICON_SVG}</span>` : ''}
-          </span>
-          <div class="rd-identifier-buttons">
-            ${searchButtonsHtml}
+  // ショップセクションのHTML
+  let shopSectionHtml = "";
+  if (provider.siteName === "Amazon.co.jp") {
+    shopSectionHtml = `
+      <!-- 仕入れ想定セクション（Amazon用） -->
+      <div class="rd-section">
+        <div class="rd-section-header">
+          <span class="rd-section-dot ${shopDotClass}"></span>
+          <span class="rd-section-title">仕入れ想定（他EC等）</span>
+        </div>
+        <div class="rd-data-grid">
+          <div class="rd-data-row">
+            <span class="rd-data-label">仕入れ値 (¥)</span>
+            <span class="rd-data-value" style="display: flex; align-items: center; gap: 4px;">
+              <span>¥</span>
+              <div class="rd-spinner-container">
+                <button class="rd-spinner-btn" id="rd-purchase-price-minus" type="button">−</button>
+                <input type="number" id="rd-input-purchase-price" min="0" step="100" value="${shopData.price || 0}" class="rd-number-input" title="他ECでの仕入れ想定金額を入力します" style="width: 70px;" />
+                <button class="rd-spinner-btn" id="rd-purchase-price-plus" type="button">+</button>
+              </div>
+            </span>
+          </div>
+          <div class="rd-data-row">
+            <span class="rd-data-label">ポイント還元 (%)</span>
+            <span class="rd-data-value" style="display: flex; align-items: center; gap: 4px;">
+              <div class="rd-spinner-container">
+                <button class="rd-spinner-btn" id="rd-point-rate-minus" type="button">−</button>
+                <input type="number" id="rd-input-point-rate" min="0" max="100" step="1" value="${shopData.pointRate || 0}" class="rd-number-input" title="ポイント還元率（%）を入力します" style="width: 55px;" />
+                <button class="rd-spinner-btn" id="rd-point-rate-plus" type="button">+</button>
+              </div>
+              <span>%</span>
+            </span>
+          </div>
+          <div class="rd-data-row">
+            <span class="rd-data-label">還元額</span>
+            <span class="rd-data-value rd-text-accent" id="rd-amazon-purchase-points">${formatNumber(shopData.points || 0)}pt</span>
+          </div>
+          <div class="rd-data-row">
+            <span class="rd-data-label">クーポン割引 (¥)</span>
+            <span class="rd-data-value rd-text-accent" style="display: flex; align-items: center; gap: 4px;">
+              <span>-¥</span>
+              <div class="rd-spinner-container">
+                <button class="rd-spinner-btn" id="rd-coupon-minus" type="button">−</button>
+                <input type="number" id="rd-input-coupon" min="0" step="100" value="${shopData.coupon || 0}" class="rd-number-input" title="クーポン割引金額を入力します" style="width: 70px;" />
+                <button class="rd-spinner-btn" id="rd-coupon-plus" type="button">+</button>
+              </div>
+            </span>
+          </div>
+          <div class="rd-divider"></div>
+          <div class="rd-data-row rd-highlight-row">
+            <span class="rd-data-label rd-text-bold">実質仕入れ値</span>
+            <span class="rd-data-value rd-net-cost" id="rd-amazon-purchase-net-cost">¥${formatNumber(shopData.netCost || 0)}</span>
           </div>
         </div>
-        <div class="rd-identifier-row">
-          <span class="rd-identifier-label">ASIN</span>
-          <span class="rd-identifier-value" id="rd-copy-asin" title="クリックでコピー" data-copy="${(amazonData && amazonData.asin) ? amazonData.asin : ''}">
-            ${(amazonData && amazonData.asin) ? amazonData.asin : "---"}
-            ${(amazonData && amazonData.asin) ? `<span class="rd-copy-icon">${COPY_ICON_SVG}</span>` : ''}
-          </span>
-          <div class="rd-identifier-buttons">
-            ${(amazonData && amazonData.asin) ? `
-              <a href="https://www.amazon.co.jp/dp/${amazonData.asin}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-amazon" title="Amazonの商品ページを開く">Amazon ↗</a>
-              <a href="https://sellercentral.amazon.co.jp/revcal?asin=${amazonData.asin}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-sim" title="FBA料金シミュレーターを一発で起動する">シミュ ↗</a>
-            ` : ''}
-          </div>
-        </div>
       </div>
-
+    `;
+  } else {
+    shopSectionHtml = `
       <!-- ショップセクション -->
       <div class="rd-section">
         <div class="rd-section-header">
@@ -433,6 +467,52 @@ function renderDashboard(shopData, amazonData) {
           </div>
         </div>
       </div>
+    `;
+  }
+
+  // ダッシュボードのHTML構造
+  dashboard.innerHTML = `
+    <div class="rd-header">
+      <div class="rd-logo">
+        <span class="rd-logo-icon">◈</span>
+        <span class="rd-logo-text">ResearchDeck</span>
+      </div>
+      <div class="rd-header-actions">
+        <button class="rd-icon-btn" id="rd-refresh-btn" title="最新情報に更新（JAN未取得時の再読み込み）">🔄</button>
+        <button class="rd-icon-btn" id="rd-settings-btn" title="設定を開く">⚙️</button>
+        <button class="rd-close" id="rd-close-btn" aria-label="閉じる">×</button>
+      </div>
+    </div>
+
+    <div class="rd-body">
+      <!-- 識別子セクション（JAN / ASIN） -->
+      <div class="rd-identifier-section">
+        <div class="rd-identifier-row">
+          <span class="rd-identifier-label">JAN</span>
+          <span class="rd-identifier-value" id="rd-copy-jan" title="クリックでコピー" data-copy="${extSearchJan}">
+            ${extSearchJan || '<span style="color: #b44a3a; font-size: 9.5px; font-family: inherit; font-weight: 700; white-space: nowrap;" title="JANコードが見つかりませんでした。ページ読み込み完了後に、右上の更新ボタン（🔄）を押して再取得してください。">⚠️ 未検出 (🔄更新)</span>'}
+            ${extSearchJan ? `<span class="rd-copy-icon">${COPY_ICON_SVG}</span>` : ''}
+          </span>
+          <div class="rd-identifier-buttons">
+            ${searchButtonsHtml}
+          </div>
+        </div>
+        <div class="rd-identifier-row">
+          <span class="rd-identifier-label">ASIN</span>
+          <span class="rd-identifier-value" id="rd-copy-asin" title="クリックでコピー" data-copy="${(amazonData && amazonData.asin) ? amazonData.asin : ''}">
+            ${(amazonData && amazonData.asin) ? amazonData.asin : "---"}
+            ${(amazonData && amazonData.asin) ? `<span class="rd-copy-icon">${COPY_ICON_SVG}</span>` : ''}
+          </span>
+          <div class="rd-identifier-buttons">
+            ${(amazonData && amazonData.asin) ? `
+              <a href="https://www.amazon.co.jp/dp/${amazonData.asin}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-amazon" title="Amazonの商品ページを開く">Amazon ↗</a>
+              <a href="https://sellercentral.amazon.co.jp/revcal?asin=${amazonData.asin}" target="_blank" rel="noopener noreferrer" class="rd-link-btn rd-link-btn-sim" title="FBA料金シミュレーターを一発で起動する">シミュ ↗</a>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+
+      ${shopSectionHtml}
 
       ${amazonSectionHtml}
 
@@ -529,6 +609,52 @@ function renderDashboard(shopData, amazonData) {
   const couponPercentInput = document.getElementById("rd-input-coupon-percent");
 
   function updateCalculations() {
+    if (provider.siteName === "Amazon.co.jp") {
+      const purchasePriceInput = document.getElementById("rd-input-purchase-price");
+      const pointRateInput = document.getElementById("rd-input-point-rate");
+      const couponInput = document.getElementById("rd-input-coupon");
+
+      const purchasePrice = parseInt(purchasePriceInput?.value || 0, 10);
+      const pointRate = parseFloat(pointRateInput?.value || 0);
+      const couponYen = parseInt(couponInput?.value || 0, 10);
+
+      const points = Math.floor(purchasePrice * (pointRate / 100));
+      const netCost = purchasePrice - points - couponYen;
+
+      const pointsDisplayEl = document.getElementById("rd-amazon-purchase-points");
+      if (pointsDisplayEl) {
+        pointsDisplayEl.textContent = `${formatNumber(points)}pt`;
+      }
+
+      const shopNetCostEl = document.getElementById("rd-amazon-purchase-net-cost");
+      if (shopNetCostEl) shopNetCostEl.textContent = `¥${formatNumber(netCost)}`;
+      
+      const amazonNetCostEl = document.getElementById("rd-amazon-net-cost");
+      if (amazonNetCostEl) amazonNetCostEl.textContent = `-¥${formatNumber(netCost)}`;
+
+      if (amazonData && amazonData.amazonPrice) {
+        const profitData = calculateProfit(amazonData.amazonPrice, amazonData.totalFees, netCost);
+        const profitEl = document.getElementById("rd-amazon-profit");
+        if (profitEl) {
+          profitEl.textContent = profitData.profit !== null ? `¥${formatNumber(profitData.profit)}` : "---";
+          profitEl.className = "rd-data-value rd-profit-value " + (profitData.profit !== null ? (profitData.profit >= 0 ? "rd-profit-positive" : "rd-profit-negative") : "");
+        }
+        const profitRateEl = document.getElementById("rd-amazon-profit-rate");
+        if (profitRateEl) {
+          profitRateEl.textContent = profitData.profitRate !== null ? `${profitData.profitRate}%` : "---";
+          profitRateEl.className = "rd-data-value " + (profitData.profitRate !== null ? (profitData.profitRate >= 0 ? "rd-profit-positive" : "rd-profit-negative") : "");
+        }
+      }
+
+      // shopDataオブジェクトを同期
+      shopData.price = purchasePrice;
+      shopData.points = points;
+      shopData.coupon = couponYen;
+      shopData.netCost = netCost;
+      shopData.pointRate = pointRate;
+      return;
+    }
+
     const extraPointRate = parseInt(extraPointInput?.value || 0, 10);
     const couponYen = parseInt(couponInput?.value || 0, 10);
     const couponPercent = parseInt(couponPercentInput?.value || 0, 10);
@@ -644,6 +770,27 @@ function renderDashboard(shopData, amazonData) {
       extraPointInput.value = val;
       updateCalculations();
     });
+  }
+
+  if (provider.siteName === "Amazon.co.jp") {
+    const purchasePriceMinus = document.getElementById("rd-purchase-price-minus");
+    const purchasePricePlus = document.getElementById("rd-purchase-price-plus");
+    const purchasePriceInput = document.getElementById("rd-input-purchase-price");
+
+    if (purchasePriceMinus && purchasePricePlus && purchasePriceInput) {
+      purchasePriceMinus.addEventListener("click", () => {
+        const val = Math.max(0, parseInt(purchasePriceInput.value || 0, 10) - 100);
+        purchasePriceInput.value = val;
+        updateCalculations();
+      });
+      purchasePricePlus.addEventListener("click", () => {
+        const val = parseInt(purchasePriceInput.value || 0, 10) + 100;
+        purchasePriceInput.value = val;
+        updateCalculations();
+      });
+    }
+
+    if (purchasePriceInput) purchasePriceInput.addEventListener("input", updateCalculations);
   }
 
   if (pointRateInput) pointRateInput.addEventListener("input", updateCalculations);
@@ -876,21 +1023,28 @@ async function fetchAndRenderAmazonData(shopData) {
     const result = await chrome.runtime.sendMessage({
       type: "FETCH_AMAZON_DATA",
       janCode: shopData.janCode,
+      asin: shopData.asin,
     });
     
     removeAmazonLoading();
     
     if (result && result.success && result.data) {
-      const discountedPrice = Math.max(0, shopData.price - shopData.coupon);
-      shopData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, result.data.categoryName);
-      
-      const discountedPoints = calculateShopPoints(shopData.price, shopData.coupon, shopData.rawPoints, shopData.pointRate, result.data.categoryName);
-      shopData.points = discountedPoints; 
-
-      shopData.extraPointRate = shopData.extraPointRate !== undefined ? shopData.extraPointRate : provider.extraPointRateDefault;
-      const extraPoints = Math.floor(shopData.taxExcludedPrice * (shopData.extraPointRate / 100));
-      shopData.extraPoints = Math.abs(extraPoints);
-      shopData.netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - shopData.coupon;
+      if (provider.siteName === "Amazon.co.jp") {
+        if (result.data.janCode) {
+          shopData.janCode = result.data.janCode;
+        }
+      } else {
+        const discountedPrice = Math.max(0, shopData.price - shopData.coupon);
+        shopData.taxExcludedPrice = calculateTaxExcludedPrice(discountedPrice, result.data.categoryName);
+        
+        const discountedPoints = calculateShopPoints(shopData.price, shopData.coupon, shopData.rawPoints, shopData.pointRate, result.data.categoryName);
+        shopData.points = discountedPoints; 
+  
+        shopData.extraPointRate = shopData.extraPointRate !== undefined ? shopData.extraPointRate : provider.extraPointRateDefault;
+        const extraPoints = Math.floor(shopData.taxExcludedPrice * (shopData.extraPointRate / 100));
+        shopData.extraPoints = Math.abs(extraPoints);
+        shopData.netCost = shopData.price - discountedPoints - Math.abs(extraPoints) - shopData.coupon;
+      }
       
       currentAmazonData = result.data;
       renderDashboard(shopData, result.data);
@@ -971,8 +1125,10 @@ async function initializeDetailPage() {
   // まずショップデータのみで描画
   renderDashboard(shopData, null);
 
-  // JANコードがある場合はAmazonデータ取得へ
+  // JANコードまたはASINがある場合はAmazonデータ取得へ
   if (shopData.janCode && provider.isValidJanCode(shopData.janCode)) {
+    await fetchAndRenderAmazonData(shopData);
+  } else if (shopData.asin) {
     await fetchAndRenderAmazonData(shopData);
   } else {
     console.log("ResearchDeck: 正しいJANコードが検出されませんでした。");
@@ -984,6 +1140,7 @@ async function initializeDetailPage() {
   const pollIntervals = [1500, 3000, 5000, 10000];
   pollIntervals.forEach(delay => {
     setTimeout(async () => {
+      if (provider.siteName === "Amazon.co.jp") return; // Amazonページの場合はポーリングをスキップ
       console.log(`ResearchDeck: 自動再スキャンを実行します (${delay}ms)...`);
       const newData = provider.extractData();
       let updated = false;
@@ -1167,7 +1324,16 @@ async function initializeDetailPage() {
       }
     }
     
-    if (!isRakutenDetail && !isRakutenBicDetail && !isRakutenBooksDetail && !isYahooStoreDetail && !isLohacoDetail) {
+    let isAmazonDetail = hostname.includes("amazon.co.jp");
+    if (isAmazonDetail) {
+      const path = window.location.pathname;
+      const isItemPage = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i.test(path);
+      if (!isItemPage) {
+        isAmazonDetail = false;
+      }
+    }
+
+    if (!isRakutenDetail && !isRakutenBicDetail && !isRakutenBooksDetail && !isYahooStoreDetail && !isLohacoDetail && !isAmazonDetail) {
       console.log("ResearchDeck: 対象のショップ詳細ページではないため起動をスキップします");
       return;
     }

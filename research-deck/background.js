@@ -17,7 +17,7 @@ importScripts("lib/sp-api-client.js", "lib/sales-estimator.js");
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // 非同期処理をラップして、return true でチャネルを維持
   if (message.type === "FETCH_AMAZON_DATA") {
-    handleFetchAmazonData(message.janCode)
+    handleFetchAmazonData(message.janCode, message.asin)
       .then((result) => sendResponse(result))
       .catch((err) => {
         console.error("ResearchDeck: Amazon データ取得失敗 -", err);
@@ -96,24 +96,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // ============================================================
 // Amazonデータ取得の統合処理
-// JANコードを受け取り、各SP-APIを順次呼び出して結果をまとめる
+// JANコードまたはASINを受け取り、各SP-APIを順次呼び出して結果をまとめる
 // ============================================================
-
-/**
- * JANコードからAmazonの全データを取得する統合関数
- *
- * 処理の流れ:
- * 1. 認証情報チェック → アクセストークン取得
- * 2. Catalog Items API → ASIN・カテゴリ・ランキング
- * 3. Product Pricing API → 現在価格
- * 4. Product Fees API → FBA手数料
- * 5. Listings Restrictions API → 出品可否
- * 6. 月間販売数を推定
- *
- * @param {string} janCode - JANコード（13桁）
- * @returns {Promise<Object>} 全データを含む結果オブジェクト
- */
-async function handleFetchAmazonData(janCode) {
+async function handleFetchAmazonData(janCode, asin = null) {
   // --- 1. 認証情報の取得 ---
   const credentials = await getCredentials();
   if (!credentials) {
@@ -134,10 +119,14 @@ async function handleFetchAmazonData(janCode) {
     };
   }
 
-  // --- 3. Catalog Items API: JANコードからASINを特定 ---
+  // --- 3. Catalog Items API: カタログ情報の取得 ---
   let catalogData;
   try {
-    catalogData = await searchCatalogByJan(janCode, accessToken);
+    if (asin) {
+      catalogData = await getCatalogItemByAsin(asin, accessToken);
+    } else {
+      catalogData = await searchCatalogByJan(janCode, accessToken);
+    }
   } catch (err) {
     return {
       success: false,
@@ -235,6 +224,7 @@ async function handleFetchAmazonData(janCode) {
       asin: catalogData.asin,
       title: catalogData.title,
       categoryName: catalogData.categoryName,
+      janCode: catalogData.janCode || null,
 
       // 価格・手数料
       amazonPrice,
@@ -265,6 +255,7 @@ async function handleFetchAmazonData(janCode) {
     },
   };
 }
+
 
 /**
  * 商品寸法（dimensions）とカテゴリ名から、FBAの月間保管手数料を計算する

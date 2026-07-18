@@ -306,6 +306,105 @@ async function searchCatalogByJan(janCode, accessToken) {
 }
 
 /**
+ * Catalog Items API: ASINから商品情報を直接取得する
+ *
+ * @param {string} asin - ASIN
+ * @param {string} accessToken - アクセストークン
+ * @returns {Promise<Object|null>} カタログ情報
+ */
+async function getCatalogItemByAsin(asin, accessToken) {
+  try {
+    const item = await spApiGet(
+      `/catalog/2022-04-01/items/${asin}`,
+      {
+        marketplaceIds: MARKETPLACE_ID_JP,
+        includedData: "summaries,salesRanks,identifiers,dimensions,relationships",
+        locale: "ja_JP",
+      },
+      accessToken
+    );
+
+    if (!item) {
+      return null;
+    }
+
+    // サマリー情報（タイトル・カテゴリ）を抽出
+    let title = "";
+    let categoryName = "";
+    if (item.summaries && item.summaries.length > 0) {
+      const summary = item.summaries[0];
+      title = summary.itemName || "";
+      if (summary.browseClassification) {
+        categoryName = summary.browseClassification.displayName || "";
+      }
+    }
+
+    // 売れ筋ランキングを抽出
+    let salesRank = null;
+    let salesRankCategory = "";
+    if (item.salesRanks && item.salesRanks.length > 0) {
+      const jpRanks = item.salesRanks.find((r) => r.marketplaceId === MARKETPLACE_ID_JP) || item.salesRanks[0];
+      if (jpRanks) {
+        let targetRank = null;
+        if (jpRanks.displayGroupRanks && jpRanks.displayGroupRanks.length > 0) {
+          targetRank = jpRanks.displayGroupRanks[0];
+        } else if (jpRanks.classificationRanks && jpRanks.classificationRanks.length > 0) {
+          targetRank = jpRanks.classificationRanks[0];
+        }
+
+        if (targetRank) {
+          salesRank = targetRank.rank;
+          salesRankCategory = targetRank.title || "";
+        }
+      }
+    }
+
+    // バリエーション関係（VARIATION）の有無をチェック
+    let hasVariations = false;
+    if (item.relationships && item.relationships.length > 0) {
+      for (const relGroup of item.relationships) {
+        if (relGroup.relationships && relGroup.relationships.length > 0) {
+          const hasVarRel = relGroup.relationships.some(
+            r => r.type === "VARIATION" && 
+            ((r.parentAsins && r.parentAsins.length > 0) || (r.childAsins && r.childAsins.length > 0))
+          );
+          if (hasVarRel) {
+            hasVariations = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // JANコード (EAN) の抽出
+    let ean = null;
+    if (item.identifiers && item.identifiers.length > 0) {
+      const jpIdentifiers = item.identifiers.find(id => id.marketplaceId === MARKETPLACE_ID_JP) || item.identifiers[0];
+      if (jpIdentifiers && jpIdentifiers.identifiers && jpIdentifiers.identifiers.length > 0) {
+        const eanId = jpIdentifiers.identifiers.find(i => i.identifierType === "EAN");
+        if (eanId) {
+          ean = eanId.identifier;
+        }
+      }
+    }
+
+    return {
+      asin,
+      title,
+      categoryName: salesRankCategory || categoryName,
+      salesRank,
+      dimensions: item.dimensions || null,
+      hasVariations,
+      janCode: ean, // EANを格納
+    };
+  } catch (err) {
+    console.error("ResearchDeck: Catalog Items API (ASIN) エラー -", err.message);
+    throw err;
+  }
+}
+
+
+/**
  * Product Pricing API (Get Pricing) から新品の最安値を取得するフォールバック処理
  * カート獲得者（Buy Box）が不在などの理由で competitivePrice から価格が取得できない場合に実行されます。
  * @param {string} asin - Amazon商品識別コード

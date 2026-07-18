@@ -10,12 +10,14 @@
         "https://biccamera.rakuten.co.jp/*",
         "https://books.rakuten.co.jp/*",
         "https://store.shopping.yahoo.co.jp/*",
-        "https://lohaco.yahoo.co.jp/*"
+        "https://lohaco.yahoo.co.jp/*",
+        "https://www.amazon.co.jp/*"
       ],
       "js": [
         "providers/base_provider.js",
         "providers/rakuten_provider.js",
         "providers/yahoo_provider.js",
+        "providers/amazon_provider.js",
         "content.js"
       ],
       "css": ["styles.css"],
@@ -42,6 +44,7 @@
     "https://sellingpartnerapi-fe.amazon.com/*",
     "https://sellercentral.amazon.co.jp/*",
     "https://store.shopping.yahoo.co.jp/*",
+    "https://www.amazon.co.jp/*",
     "http://localhost:3000/*"
   ]
 }
